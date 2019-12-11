@@ -96,15 +96,33 @@ public:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
-		/*
+		//User input
+
 		if(GetKey(olc::Key::UP).bHeld) elonPos.y -= 2;
 		if(GetKey(olc::Key::DOWN).bHeld) elonPos.y += 2;
 		if(GetKey(olc::Key::RIGHT).bHeld) elonPos.x += 2;
 		if(GetKey(olc::Key::LEFT).bHeld) elonPos.x -= 2;		
-		*/
+		
+		//Collision detection
+
+		//float colX = elonPos.x / tileWidth;
+		//float colY = elonPos.y / tileHeight;
+
+		float colOffsetXLeft = elonPos.x / tileWidth;
+		float colOffsetXRight = (elonPos.x + elonPos.w) / tileWidth;
+
+		float colOffsetYTop = elonPos.y / tileHeight;
+		float colOffsetYBottom = (elonPos.y + elonPos.h) / tileHeight;
+
+		elonPos.x = colOffsetXLeft < 1 ? (tileWidth + 1) : elonPos.x;
+		elonPos.x = colOffsetXRight > (levelWidth - 1) ? (tileWidth * (levelWidth - 1)) - elonPos.w : elonPos.x;
+
+		elonPos.y = colOffsetYTop < 1 ? (tileHeight + 1) : elonPos.y;
+		elonPos.y = colOffsetYBottom > (levelHeight - 1) ? (tileHeight * (levelHeight - 1)) - elonPos.h : elonPos.y;
 
 		//Snap Sprite
 
+		/*
 		float tileX = GetMouseX() / tileWidth;
 		float tileY = GetMouseY() / tileHeight;
 
@@ -113,7 +131,7 @@ public:
 
 		elonPos.x = (snapX * tileWidth) - (elonPos.w / 2);
 		elonPos.y = (snapY * tileHeight) - (elonPos.h / 2);
-
+		*/
 		
 
 
@@ -138,7 +156,7 @@ public:
 public:
 	std::vector<olc::Sprite*> tiles;
 	olc::Sprite* elon;
-	SpritePosition elonPos {0, 0, 102, 102};
+	SpritePosition elonPos {60, 60, 102, 102};
 };
 
 
