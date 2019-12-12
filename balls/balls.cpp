@@ -19,6 +19,7 @@ IMPLEMNTED WITH THE OLCPIXELGAMEENGINE FROM:
 
 
 typedef std::pair <float, float> fPair;
+typedef std::pair <int, int> iPair;
 
 
 struct Ball
@@ -41,8 +42,10 @@ private:
 
 	std::vector<fPair> modelCircle;
 	std::vector<Ball*> balls;
-	int circlePoints = 60;
+	int circlePoints = 20;
 	float scaleFactor = 10.0;
+
+	std::vector< std::vector<iPair> > lines;
 
 public:
 	Pico()
@@ -57,10 +60,10 @@ public:
 		
 		for(int i = 0; i < circlePoints; i++)
 		{
-			modelCircle.push_back({ cosf(i / (float)(circlePoints -1) * 2.0f * 3.14159f) , sinf(i / (float)(circlePoints - 1) * 2.0f * 3.14159f) });
+			modelCircle.push_back({ cosf(i / (float)(circlePoints -1) * 2.00f * 3.14159f) , sinf(i / (float)(circlePoints - 1) * 2.0f * 3.14159f) });
 		}
 
-		Ball* b1 = new Ball{50.0, 50.0, 0.0, 0.0, 20.0};
+		Ball* b1 = new Ball{100.0, 100.0, 0.0, 0.0, 50.0};
 		balls.push_back(b1);
 
 		
@@ -108,7 +111,26 @@ public:
 			}
 		}
 
-		
+		for(auto ball : balls)
+		{
+			for(int s = 0; s < circlePoints; s++)
+			{
+				float lastX, lastY;
+				float pointX = (modelCircle[s].first * ball->radius) + ball->px;
+				float pointY = (modelCircle[s].second * ball->radius) + ball->py;
+
+				if(s > 0)
+				{
+					//if(s <= circlePoints / 2)
+						makeLine(lastX, lastY, pointX, pointY, olc::BLACK);
+					//else makeLine(pointX, pointY, lastX, lastY, olc::BLACK);
+				}
+				lastX = pointX;
+				lastY = pointY;
+
+				Draw(pointX, pointY, olc::WHITE);
+			}
+		}
 
 		SetPixelMode(olc::Pixel::NORMAL);
 
@@ -118,12 +140,12 @@ public:
 	bool OnUserUpdate(float fElapsedTime) override
 	{
 		//User input
-
+/*
 		if(GetKey(olc::Key::UP).bHeld) balls[0]->py -= 2;
 		if(GetKey(olc::Key::DOWN).bHeld) balls[0]->py += 2;
 		if(GetKey(olc::Key::RIGHT).bHeld) balls[0]->px += 2;
 		if(GetKey(olc::Key::LEFT).bHeld) balls[0]->px -= 2;		
-		
+*/		
 		//Collision detection
 
 
@@ -156,55 +178,72 @@ public:
 		}
 */
 
-		for(auto ball : balls)
+		
+
+		for(auto vec : lines)
 		{
-			for(int s = 0; s < circlePoints; s++)
+			for(auto l : vec)
 			{
-				float pointX = (modelCircle[s].first * ball->radius) + ball->px;
-				float pointY = (modelCircle[s].second * ball->radius) + ball->py;
-				Draw(pointX, pointY, olc::WHITE);
+				Draw(l.first, l.second, olc::BLACK);
 			}
 		}
 
 		return true;
 	}
 
-	void makeLine(float x1, float y1, float x2, float y2, olc::Pixel p)
+	bool makeLine(float x1, float y1, float x2, float y2, olc::Pixel p)
 	{
-		float dx, dy;
-		bool xDir, yDir;
+		std::vector<iPair> line;
 
-		std::vector<fPair> line;
+		float dx, dy;
 
 		dx = x2 - x1;
 		dy = y2 - y1;
 
+		if(dx == 0 || dy == 0) return false;
+
 		float gradientX = dx / dy;
-		float gradientY = (dy / dx) * gradientX;
+		float gradientY = dy / dx;
 
-		float gradCountX = 0.0;
-		float gradCountY = 0.0;
+		float tmp = 0.000;
 
-		if(dx < 0) xDir = false;
-		if(dx > 0) xDir = true;
-		if(dy < 0) yDir = false;
-		if(dy > 0) yDir = true;
-
-		float vectC = sqrt((dx * dx) + (dy * dy));
-
-		if(dx > 0 && dy < dx)
+		if(dx < 0 && dy < 0)
 		{
-			for(int cx = 1; cx < (int)dx; cx++)
+			for(int cx = 0; cx <= (int)fabs(dx); cx++)
 			{
-				if(sqrt(((cx / vectC) * (vectC * vectC)) - (cx * cx)) < 1.0f)
-				{
-					line.push_back(x1 + cx, y1);
-				}
-				else line.push_back(x1 + cx, y1 + cx)
+				tmp -= fabs(gradientY);
+				line.push_back({x1 - cx, y1 + (int)tmp});
 			}
 		}
 
-		if()
+		else if(dx > 0 && dy < 0)
+		{
+			for(int cx = 0; cx <= (int)dx; cx++)
+			{
+				tmp -= fabs(gradientY);
+				line.push_back({x1 + cx, y1 + (int)tmp});
+			}
+		}
+
+		else if(dx > 0 && dy > 0)
+		{
+			for(int cx = 0; cx <= (int)dx; cx++)
+			{
+				tmp += fabs(gradientY);
+				line.push_back({x1 + cx, y1 + (int)tmp});
+			}
+		}
+
+		else if(dx < 0 && dy > 0)
+		{
+			for(int cx = 0; cx <= (int)fabs(dx); cx++)
+			{
+				tmp += fabs(gradientY);
+				line.push_back({x1 - cx, y1 + (int)tmp});
+			}
+		}
+		lines.push_back(line);
+		return true;
 	}
 
 };
@@ -214,7 +253,7 @@ public:
 int main()
 {
 	Pico demo;
-	if(demo.Construct(256, 256, 4, 4)) demo.Start();
+	if(demo.Construct(256, 240, 4, 4)) demo.Start();
 
 
 	return 0;
