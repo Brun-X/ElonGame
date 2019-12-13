@@ -184,9 +184,9 @@ public:
 
 				else
 				{
-					float rotation = 0.707f;
-					ball->vx = (cosf(rotation) * 2.0f * 3.13159f) * ball->radius;
-					ball->vy = (-sinf(rotation) * 2.0f * 3.13159f) * ball->radius;
+					float rotation = 225.0f;
+					ball->vx = cosf(rotation) * ball->radius + ball->px;
+					ball->vy = -sinf(rotation) * ball->radius + ball->py;
 					
 					//adjustAngle(temp, 0.5); 
 					makeLine(ball->px, ball->py, ball->vx, ball->vy, olc::BLACK);
@@ -245,6 +245,7 @@ public:
 
 
 		float tmp = 0.000;
+		float round = 0.8;
 
 		if(fabs(gradientX) >= fabs(gradientY))
 		{
@@ -254,7 +255,7 @@ public:
 				for(int cx = 0; cx <= (int)fabs(dx); cx++)
 				{
 					tmp -= fabs(gradientY);
-					tmp = (abs(tmp) - (int)abs(tmp)) < 0.5f ? tmp : (int)tmp - 1;
+					tmp = (abs(tmp) - (int)abs(tmp)) < round ? tmp : (int)tmp - 1;
 					line.push_back({x1 - cx, y1 + (int)tmp});
 				}
 			}
@@ -264,7 +265,7 @@ public:
 				for(int cx = 0; cx <= (int)dx; cx++)
 				{
 					tmp -= fabs(gradientY);
-					tmp = (abs(tmp) - (int)abs(tmp)) < 0.5f ? tmp : (int)tmp - 1;
+					tmp = (abs(tmp) - (int)abs(tmp)) < round ? tmp : (int)tmp - 1;
 					line.push_back({x1 + cx, y1 + (int)tmp});
 				}
 			}
@@ -274,7 +275,7 @@ public:
 				for(int cx = 0; cx <= (int)dx; cx++)
 				{
 					tmp += fabs(gradientY);
-					tmp = (abs(tmp) - (int)abs(tmp)) < 0.5f ? tmp : (int)tmp + 1;
+					tmp = (abs(tmp) - (int)abs(tmp)) < round ? tmp : (int)tmp + 1;
 					line.push_back({x1 + cx, y1 + (int)tmp});
 				}
 			}
@@ -284,7 +285,7 @@ public:
 				for(int cx = 0; cx <= (int)abs(dx); cx++)
 				{
 					tmp += fabs(gradientY);
-					tmp = (abs(tmp) - (int)fabs(tmp)) < 0.5f ? tmp : (int)tmp + 1;
+					tmp = (abs(tmp) - (int)fabs(tmp)) < round ? tmp : (int)tmp + 1;
 					line.push_back({x1 - cx, y1 + (int)tmp});
 				}
 			}
@@ -298,7 +299,7 @@ public:
 				for(int cy = 0; cy <= (int)fabs(dy); cy++)
 				{
 					tmp -= fabs(gradientX);
-					tmp = (abs(tmp) - (int)abs(tmp)) < 0.5f ? tmp : (int)tmp - 1;
+					tmp = (abs(tmp) - (int)abs(tmp)) < round ? tmp : (int)tmp - 1;
 					line.push_back({x1 + (int)tmp, y1 - cy});
 				}
 			}
@@ -308,7 +309,7 @@ public:
 				for(int cy = 0; cy <= (int)fabs(dy); cy++)
 				{
 					tmp += fabs(gradientX);
-					tmp = (abs(tmp) - (int)abs(tmp)) < 0.5f ? tmp : (int)tmp + 1;
+					tmp = (abs(tmp) - (int)abs(tmp)) < round ? tmp : (int)tmp + 1;
 					line.push_back({x1 + (int)tmp, y1 - cy});
 				}
 			}
@@ -318,7 +319,7 @@ public:
 				for(int cy = 0; cy <= (int)fabs(dy); cy++)
 				{
 					tmp += fabs(gradientX);
-					tmp = (abs(tmp) - (int)abs(tmp)) < 0.5f ? tmp : (int)tmp + 1;
+					tmp = (abs(tmp) - (int)abs(tmp)) < round ? tmp : (int)tmp + 1;
 					line.push_back({x1 + (int)tmp, y1 + cy});
 				}
 			}
@@ -328,7 +329,7 @@ public:
 				for(int cy = 0; cy <= (int)fabs(dy); cy++)
 				{
 					tmp -= fabs(gradientX);
-					tmp = (abs(tmp) - (int)abs(tmp)) < 0.5f ? tmp : (int)tmp - 1;
+					tmp = (abs(tmp) - (int)abs(tmp)) < round ? tmp : (int)tmp - 1;
 					line.push_back({x1 + (int)tmp, y1 + cy});
 				}
 			}
