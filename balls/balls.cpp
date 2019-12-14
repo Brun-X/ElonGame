@@ -32,7 +32,7 @@ public:
 
 	virtual void calculateShape() {}
 
-	bool makeLine(float x1, float y1, float x2, float y2, std::vector<std::vector<iPair>>* v)
+	static bool makeLine(float x1, float y1, float x2, float y2, std::vector<std::vector<iPair>>* v)
 	{
 		std::vector<iPair> line;
 		float gradientX, gradientY;
@@ -161,6 +161,21 @@ public:
 
 };
 
+class Line : public Object
+{
+public:
+	Line() : Object() {};
+
+	Line(float x1, float y1, float x2, float y2) : x1_(x1), y1_(y1), x2_(x2), y2_(x2)
+	{
+		makeLine(x1_, y1_, x2_, y2_, &objectLines_);
+	} 
+
+public:
+	float x1_, y1_, x2_, y2_;
+	std::vector<iPair> line_;
+};
+
 class Ball : public Object
 {
 public:
@@ -245,6 +260,8 @@ private:
 	std::vector<Ball*> balls;
 	std::vector<Object*> objects;
 
+	//std::vector<std::vector<iPair>> underConstruction_ = nullptr;
+
 public:
 	Pico()
 	{
@@ -262,12 +279,13 @@ public:
 			modelCircle.push_back({ cosf(i / (float)(circlePoints -1) * 2.00f * 3.14159f) , sinf(i / (float)(circlePoints - 1) * 2.0f * 3.14159f) });
 		}
 		*/
-		for(int i = 0; i < 5; i++)
+		
+		for(int i = 0; i < 3; i++)
 		{
 			objects.push_back( new Ball(i, ((rand() + 10) % (ScreenWidth() - 10)), ((rand() + 10) % (ScreenHeight() - 10)), 0.0, 0.0, (float)((1 + (rand() % 5)) * 8), 0.0f));
 			
 		}
-		
+	
 
 		
 
@@ -335,11 +353,28 @@ public:
 	{
 		//User input
 
+
+
 		if(GetKey(olc::Key::UP).bHeld) static_cast<Ball*>(objects[0])->moveDirection(1.0f);
 		if(GetKey(olc::Key::DOWN).bHeld) static_cast<Ball*>(objects[0])->moveDirection(-1.0f);
 		if(GetKey(olc::Key::RIGHT).bHeld) static_cast<Ball*>(objects[0])->rotation_ += 1.0f;
 		if(GetKey(olc::Key::LEFT).bHeld) static_cast<Ball*>(objects[0])->rotation_ -= 1.0f;		
-		
+
+
+/*
+		iPair lastMousePos = 
+
+		if(GetMouse(0).bPressed) 
+		{
+
+			underConstruction_.push_back(new Line(GetMouseX(), GetMouseY(), GetMouseX(), GetMouseY()));
+		}
+
+		if(GetMouse(0).bHeld) 
+		{}
+
+*/
+
 		//Collision detection
 
 		for(auto o : objects)
