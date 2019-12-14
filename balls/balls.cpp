@@ -166,7 +166,7 @@ class Ball : public Object
 public:
 	Ball() : Object() {}
 
-	Ball(float px, float py, float vx, float vy, float radius, float rotation) : px_(px), py_(py), vx_(vx), vy_(vy), radius_(radius), rotation_(rotation)
+	Ball(int id, float px, float py, float vx, float vy, float radius, float rotation) : id_(id), px_(px), py_(py), vx_(vx), vy_(vy), radius_(radius), rotation_(rotation)
 	{
 		mc_.push_back({ 0.0f, 0.0f });
 		
@@ -219,6 +219,7 @@ public:
 
 
 public:
+	int id_;
 	float px_;
 	float py_;
 	float vx_;
@@ -261,9 +262,12 @@ public:
 			modelCircle.push_back({ cosf(i / (float)(circlePoints -1) * 2.00f * 3.14159f) , sinf(i / (float)(circlePoints - 1) * 2.0f * 3.14159f) });
 		}
 		*/
-
-		Ball* b1 = new Ball(100.0, 100.0, 0.0, 0.0, 50.0, 0.0f);
-		objects.push_back(b1);
+		for(int i = 0; i < 5; i++)
+		{
+			objects.push_back( new Ball(i, ((rand() + 10) % (ScreenWidth() - 10)), ((rand() + 10) % (ScreenHeight() - 10)), 0.0, 0.0, (float)((1 + (rand() % 5)) * 8), 0.0f));
+			
+		}
+		
 
 		
 
