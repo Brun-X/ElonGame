@@ -166,10 +166,12 @@ class Line : public Object
 public:
 	Line() : Object() {};
 
-	Line(float x1, float y1, float x2, float y2) : x1_(x1), y1_(y1), x2_(x2), y2_(x2)
+	Line(float x1, float y1, float x2, float y2) : x1_(x1), y1_(y1), x2_(x2), y2_(y2)
 	{
 		makeLine(x1_, y1_, x2_, y2_, &objectLines_);
-	} 
+	}
+
+	virtual void calculateShape() override {}
 
 public:
 	float x1_, y1_, x2_, y2_;
@@ -256,11 +258,13 @@ private:
 	int tileWidth = 8;
 	int tileHeight = 8;
 
-	std::vector<fPair> modelCircle;
+	std::vector<iPair> grid_;
+	int gridSize_ = 32;
 	std::vector<Ball*> balls;
 	std::vector<Object*> objects;
-
-	//std::vector<std::vector<iPair>> underConstruction_ = nullptr;
+	iPair newMousePos;
+	iPair lastMousePos;
+	bool drawing_ = false;
 
 public:
 	Pico()
@@ -271,21 +275,24 @@ public:
 	bool OnUserCreate() override
 	{
 
-		/*
-		modelCircle.push_back({ 0.0f, 0.0f });
+		//grid_.push_back({ 0, 0 });
 		
-		for(int i = 0; i <= circlePoints; i++)
+		for(int x = 0; x < ScreenWidth() / gridSize_; x++)
 		{
-			modelCircle.push_back({ cosf(i / (float)(circlePoints -1) * 2.00f * 3.14159f) , sinf(i / (float)(circlePoints - 1) * 2.0f * 3.14159f) });
+			for(int y = 0; y < ScreenHeight() / gridSize_; y++)
+			{
+				grid_.push_back({x * gridSize_, y * gridSize_});
+			}
 		}
-		*/
-		
+
+
+		/*
 		for(int i = 0; i < 3; i++)
 		{
 			objects.push_back( new Ball(i, ((rand() + 10) % (ScreenWidth() - 10)), ((rand() + 10) % (ScreenHeight() - 10)), 0.0, 0.0, (float)((1 + (rand() % 5)) * 8), 0.0f));
 			
 		}
-	
+	*/
 
 		
 
@@ -361,19 +368,31 @@ public:
 		if(GetKey(olc::Key::LEFT).bHeld) static_cast<Ball*>(objects[0])->rotation_ -= 1.0f;		
 
 
-/*
-		iPair lastMousePos = 
+
+		
 
 		if(GetMouse(0).bPressed) 
 		{
-
-			underConstruction_.push_back(new Line(GetMouseX(), GetMouseY(), GetMouseX(), GetMouseY()));
+			//std::vector<std::vector<iPair>> movingLine;
+			lastMousePos = {GetMouseX(), GetMouseY()};
+			drawing_ = true;
+			//underConstruction_->push_back(lastMousePos);
+			//new Line(GetMouseX(), GetMouseY(), GetMouseX(), GetMouseY())
+			//underConstruction_.push_back();
 		}
 
 		if(GetMouse(0).bHeld) 
-		{}
+		{
+			newMousePos = {GetMouseX(), GetMouseY()};
+		}
 
-*/
+		if(GetMouse(0).bReleased)
+		{
+			objects.push_back(new Line(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second));
+			drawing_ = false;
+		}
+
+
 
 		//Collision detection
 
@@ -390,15 +409,32 @@ public:
 			}
 		}
 
+		for(auto dots : grid_)
+		{
+			Draw(dots.first, dots.second);
+		}
+
 		for(auto obj : objects)
 		{
 			for(auto lines : obj->objectLines_)
 			{
 				for(auto line : lines)
-				Draw(line.first, line.second, olc::BLACK);
+				Draw(line.first, line.second, olc::WHITE);
 			}
 		}
 
+		if(drawing_)
+		{
+			std::vector<std::vector<iPair>> movingLine;
+			Object::makeLine(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second, &movingLine);
+			for(auto lines : movingLine)
+			{
+				for(auto line: lines)
+				{
+					Draw(line.first, line.second, olc::RED);
+				}
+			}
+		}
 		return true;
 	}
 
@@ -411,7 +447,7 @@ public:
 int main()
 {
 	Pico demo;
-	if(demo.Construct(256, 240, 4, 4)) demo.Start();
+	if(demo.Construct(800, 600, 2, 2)) demo.Start();
 
 
 	return 0;
