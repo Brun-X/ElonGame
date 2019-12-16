@@ -31,6 +31,7 @@ class Object
 public:
 	std::vector<std::vector<iPair>> objectLines_;
 	int id_;
+	int shape_ = 0;
 	
 	virtual ~Object() {}
 
@@ -173,6 +174,7 @@ public:
 	Line(float x1, float y1, float x2, float y2) : x1_(x1), y1_(y1), x2_(x2), y2_(y2)
 	{
 		makeLine(x1_, y1_, x2_, y2_, &objectLines_);
+		shape_ = LINE;
 	}
 
 	virtual void calculateShape() override {}
@@ -199,6 +201,7 @@ public:
 		makeLine(x2_, y1_, x2_, y2_, &objectLines_);
 		makeLine(x2_, y2_, x1_, y2_, &objectLines_);
 		makeLine(x1_, y2_, x1_, y1_, &objectLines_);
+		shape_ = BOX;
 	}
 
 	virtual void calculateShape() override {}
@@ -211,6 +214,7 @@ public:
 
 	Ball(float px, float py, float vx, float vy, float radius, float rotation) : px_(px), py_(py), vx_(vx), vy_(vy), radius_(radius), rotation_(rotation)
 	{
+		shape_ = BALL;
 		mc_.push_back({ 0.0f, 0.0f });
 		
 		for(int i = 0; i <= circlePoints; i++)
@@ -321,7 +325,7 @@ private:
 	iPair newMousePos;
 	iPair lastMousePos;
 	bool drawing_ = false;
-	Object* drawingObject = nullptr;
+	boost::shared_ptr<Object> drawingObject;
 
 public:
 	Pico()
@@ -404,18 +408,12 @@ public:
 	bool OnUserUpdate(float fElapsedTime) override
 	{
 		//User input
-
-		Ball tempBall;
-		Box tempBox;
-		Line tempLine;
 /*
 		if(GetKey(olc::Key::UP).bHeld) static_cast<Ball*>(objects[0])->moveDirection(1.0f);
 		if(GetKey(olc::Key::DOWN).bHeld) static_cast<Ball*>(objects[0])->moveDirection(-1.0f);
 		if(GetKey(olc::Key::RIGHT).bHeld) static_cast<Ball*>(objects[0])->rotation_ += 1.0f;
 		if(GetKey(olc::Key::LEFT).bHeld) static_cast<Ball*>(objects[0])->rotation_ -= 1.0f;		
 */
-
-
 
 		if(GetMouse(0).bPressed) 
 		{
@@ -431,12 +429,6 @@ public:
 		if(GetMouse(0).bHeld) 
 		{
 			newMousePos = {GetMouseX(), GetMouseY()};
-			/*switch(shapeId)
-			{
-				case BALL :
-
-					break;
-			}*/
 		}
 
 		if(GetMouse(0).bReleased)
@@ -448,17 +440,43 @@ public:
 			if(shapeId == LINE) objects.push_back(new Line(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second));
 
 			drawing_ = false;
-			drawingObject = nullptr;
+			drawingObject.reset();
 		}
 
 
 
 		//Collision detection
 
+
+
+		//Drawing screen
+
 		for(auto o : objects)
 		{
-			o->calculateShape();
+			if(o->shape_ == BALL)
+			{
+				for(auto oNested : objects)
+				{
+					if(o != oNested)
+					{						
+						for(auto lines : oNested->objectLines_)
+						{
+							for(auto line : lines)
+							{
+								Ball* b = static_cast<Ball*>(o);
+								float hyp = sqrtf( ((line.first - b->px_) * (line.first - b->px_)) + ((line.second - b->py_) * (line.second - b->py_)) );
+								if(hyp < b->radius_)
+								{
+									b->px_ -= cosf((b->px_ - line.first) / hyp) * (b->radius_ - hyp);
+									b->py_ -= -sinf((b->py_ - line.second) / hyp) * (b->radius_ - hyp);
+								}
+							}
+						}			
+					}
+				}
+			}
 		}
+
 
 		for(int x = 0; x < ScreenWidth(); x++)
 		{
@@ -475,6 +493,7 @@ public:
 
 		for(auto obj : objects)
 		{
+			obj->calculateShape();
 			for(auto lines : obj->objectLines_)
 			{
 				for(auto line : lines)
@@ -484,47 +503,34 @@ public:
 
 		if(drawing_)
 		{
-			
-
 			switch(shapeId)
 			{
 				case BOX :
 					{
-					Box box(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second);
-					tempBox = box;
-					//std::cout << "test" << std::endl;
-					drawingObject = &tempBox;
+					boost::shared_ptr<Object> b(new Box(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second));
+					drawingObject = boost::static_pointer_cast<Object>(b);
 					break;
 					}
 
 				case BALL :
 					{
-					Ball ball((float)lastMousePos.first, (float) lastMousePos.second, (float) newMousePos.first, (float) newMousePos.second, -1.0f, 0.0f);
-					tempBall = ball; 
-					drawingObject = &tempBall;
-
-/*					drawingObject = static_cast<Object>(ball);
-					std::cout << "shared drawingObject: " << drawingObject.use_count() << std::endl;
-					std::cout << "shared tempballptr: " << tempBall.use_count() << std::endl;
-*/
+					boost::shared_ptr<Object> c(new Ball((float)lastMousePos.first, (float) lastMousePos.second, (float) newMousePos.first, (float) newMousePos.second, -1.0f, 0.0f));
+					drawingObject = boost::static_pointer_cast<Object>(c);
 					break;
 					}
 
 				case LINE :
 					{
-					Line line(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second); 
-					tempLine = line;
-					drawingObject = &tempLine;
-					//Object::makeLine(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second, &movingLine);
+					boost::shared_ptr<Object> l(new Line(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second)); 
+					drawingObject = boost::static_pointer_cast<Object>(l);
 					break;
 					}
 
 				default :
-					drawingObject = nullptr;
+					drawingObject.reset();
 					break;
 			}
 
-			//Box b(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second);
 			if(drawingObject != nullptr)
 			{
 				for(auto lines : drawingObject->objectLines_)
