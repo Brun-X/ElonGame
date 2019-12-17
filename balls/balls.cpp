@@ -222,11 +222,14 @@ public:
 			mc_.push_back({ cosf(i / (float)(circlePoints -1) * 2.00f * 3.14159f) , sinf(i / (float)(circlePoints - 1) * 2.0f * 3.14159f) });
 		}
 
-		if(radius_ < 0)
+		if(radius < 0)
 		{
 			radius_ = sqrt((fabs(px - vx) * fabs(px - vx)) + (fabs(py - vy) * fabs(py - vy)));
+			radius_ = px_ < vx_ ? radius_ : -radius_;
 
-			rotation_ = acosf((fabs(px - vx) / radius));
+			rotation_ = acosf(fabs((vx_ - px_)) / radius_);
+			if(vy_ > py_ && radius_ > 0.0f) rotation_ = (M_PI - rotation_) + M_PI;
+			else if(vy_ > py_ && radius_ < 0.0f) rotation_ = M_PI;
 		}
 
 		float pointX, pointY;
@@ -277,11 +280,11 @@ public:
 			}
 			else
 			{
-				float phi = rotation_ * (M_PI / 180);
-				vx_ = cosf(phi) * radius_ + px_;
-				vy_ = -sinf(phi) * radius_ + py_;
+				float phi = rotation_ * (M_PI / 180.0f);
+				float lX = cosf(phi) * radius_ + px_;
+				float lY = -sinf(phi) * radius_ + py_;
 
-				makeLine(px_, py_, vx_, vy_, &objectLines_);
+				makeLine(px_, py_, lX, lY, &objectLines_);
 			} 	
 		}
 	}
@@ -289,9 +292,14 @@ public:
 
 	void moveDirection(float stepSize)
 	{
-		float phi = rotation_ * (M_PI / 180);
-		px_ = cosf(phi) * stepSize + px_;
-		py_ = -sinf(phi) * stepSize + py_;
+		float oldPx = px_;
+		float oldPy = py_;
+
+		float phi = rotation_ * (M_PI / 180.0f);
+		px_ = cosf(rotation_) * stepSize + px_;
+		py_ = -sinf(rotation_) * stepSize + py_;
+		vx_ += (oldPx - px_);
+		vy_ += (oldPy - py_);
 	}
 
 
@@ -302,7 +310,9 @@ public:
 	float vx_;
 	float vy_;
 	float radius_;
-	float rotation_ = 0;
+	float rotation_;
+	float velocity_ = 2.0f;
+	float acceleration_ = 1.0f;
 
 private:
 	std::vector<fPair> mc_;
@@ -444,12 +454,21 @@ public:
 		}
 
 
+		//Resolve physics
+		for(auto o : objects)
+		{
+			if(o->shape_ == BALL)
+			{
+				Ball* b = static_cast<Ball*>(o);
+				b->moveDirection(b->velocity_);
+
+				std::cout << "b->rotation_ : " << b->rotation_ << std::endl;
+
+				if(b->py_ > ScreenHeight()) b->py_ = 0.0f;
+			}
+		}
 
 		//Collision detection
-
-
-
-		//Drawing screen
 
 		for(auto o : objects)
 		{
@@ -467,8 +486,16 @@ public:
 								float hyp = sqrtf( ((line.first - b->px_) * (line.first - b->px_)) + ((line.second - b->py_) * (line.second - b->py_)) );
 								if(hyp < b->radius_)
 								{
-									b->px_ -= cosf((b->px_ - line.first) / hyp) * (b->radius_ - hyp);
-									b->py_ -= -sinf((b->py_ - line.second) / hyp) * (b->radius_ - hyp);
+									float nx = (b->px_ - line.first) / hyp;
+									float ny = (b->py_ - line.second) / hyp;
+
+									float tx = -ny;
+									float ty = nx;
+
+									//dpTan = line.first * tx + line.second * ty;
+
+									b->px_ -= cosf((b->px_ - line.first)) * tx;
+									b->py_ -= -sinf((b->py_ - line.second)) * ty;
 								}
 							}
 						}			
@@ -477,6 +504,7 @@ public:
 			}
 		}
 
+		//Drawing screen
 
 		for(int x = 0; x < ScreenWidth(); x++)
 		{
