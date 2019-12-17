@@ -228,8 +228,8 @@ public:
 			radius_ = px_ < vx_ ? radius_ : -radius_;
 
 			rotation_ = acosf(fabs((vx_ - px_)) / radius_);
-			if(vy_ > py_ && radius_ > 0.0f) rotation_ = (M_PI - rotation_) + M_PI;
-			else if(vy_ > py_ && radius_ < 0.0f) rotation_ = M_PI;
+			if(vy_ > py_ && radius_ > 0.0f) rotation_ = (2 * M_PI) - rotation_;
+			else if(vy_ > py_ && radius_ < 0.0f) rotation_ += M_PI;
 		}
 
 		float pointX, pointY;
