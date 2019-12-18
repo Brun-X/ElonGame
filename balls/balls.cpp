@@ -18,7 +18,7 @@ IMPLEMNTED WITH THE OLCPIXELGAMEENGINE FROM:
 #include <vector>
 #include <boost/shared_ptr.hpp>
 
-enum { BALL = 1, BOX=2, LINE=3 };
+enum { MOVE=0, BALL=1, BOX=2, LINE=3 };
 
 
 typedef std::pair <float, float> fPair;
@@ -229,7 +229,7 @@ public:
 
 			rotation_ = acosf(fabs((vx_ - px_)) / radius_);
 			if(vy_ > py_ && radius_ > 0.0f) rotation_ = (2 * M_PI) - rotation_;
-			else if(vy_ > py_ && radius_ < 0.0f) rotation_ += M_PI;
+			else if(vy_ > py_ && radius_ < 0.0f) rotation_ = -rotation_;
 		}
 
 		float pointX, pointY;
@@ -280,11 +280,7 @@ public:
 			}
 			else
 			{
-				float phi = rotation_ * (M_PI / 180.0f);
-				float lX = cosf(phi) * radius_ + px_;
-				float lY = -sinf(phi) * radius_ + py_;
-
-				makeLine(px_, py_, lX, lY, &objectLines_);
+				makeLine(px_, py_, vx_, vy_, &objectLines_);
 			} 	
 		}
 	}
@@ -292,14 +288,24 @@ public:
 
 	void moveDirection(float stepSize)
 	{
-		float oldPx = px_;
-		float oldPy = py_;
+/*
+		rotation_ = acosf(fabs((vx_ - px_)) / radius_);
+		if(vy_ > py_ && radius_ > 0.0f) rotation_ = (2 * M_PI) - rotation_;
+		else if(vy_ > py_ && radius_ < 0.0f) rotation_ = -rotation_;
+*/
 
-		float phi = rotation_ * (M_PI / 180.0f);
-		px_ = cosf(rotation_) * stepSize + px_;
-		py_ = -sinf(rotation_) * stepSize + py_;
-		vx_ += (oldPx - px_);
-		vy_ += (oldPy - py_);
+		float directionX = cosf(rotation_) * stepSize;
+		float directionY = -sinf(rotation_) * stepSize;
+
+		px_ += directionX;
+		py_ += directionY;
+		vx_ += directionX;
+		vy_ += directionY;
+	}
+
+	bool isPointInsideCircle(float x, float y)
+	{
+		return sqrtf(((px_ - x) * (px_ - x)) + ((py_ - y) * (py_ - y))) < fabs(radius_) ? true : false;
 	}
 
 
@@ -311,7 +317,7 @@ public:
 	float vy_;
 	float radius_;
 	float rotation_;
-	float velocity_ = 2.0f;
+	float velocity_ = 1.20f;
 	float acceleration_ = 1.0f;
 
 private:
@@ -354,7 +360,7 @@ public:
 		}
 
 
-		objects.push_back(new Box(20.0f, 20.0f, 150.0f, 150.0f));
+		//objects.push_back(new Box(20.0f, 20.0f, 150.0f, 150.0f));
 
 
 		/*
@@ -433,7 +439,26 @@ public:
 			if(GetKey(olc::Key::B).bHeld) shapeId = BOX;
 			else if(GetKey(olc::Key::C).bHeld) shapeId = BALL;
 			else if(GetKey(olc::Key::L).bHeld) shapeId = LINE;
-			else shapeId = 0;
+			else shapeId = MOVE;
+
+			if(shapeId == MOVE)
+			{
+				for(auto o = objects.begin(); o != objects.end();)
+				{	
+					if((*o)->shape_ == BALL)
+					{
+						//Ball* b = static_cast<Ball*>(o);
+						if(static_cast<Ball*>(*o)->isPointInsideCircle(lastMousePos.first, lastMousePos.second))
+						{
+							drawingObject = boost::shared_ptr<Object>(*o);
+							o = objects.erase(o);
+							break;
+						}
+						else ++o;
+					}
+					
+				}
+			}
 		}
 
 		if(GetMouse(0).bHeld) 
@@ -447,7 +472,9 @@ public:
 			
 			else if(shapeId == BALL) objects.push_back(new Ball((float)lastMousePos.first, (float) lastMousePos.second, (float) newMousePos.first, (float) newMousePos.second, -1.0f, 0.0f));
 
-			if(shapeId == LINE) objects.push_back(new Line(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second));
+			else if(shapeId == LINE) objects.push_back(new Line(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second));
+
+			else if(shapeId == MOVE) objects.push_back(drawingObject.get());
 
 			drawing_ = false;
 			drawingObject.reset();
@@ -462,9 +489,15 @@ public:
 				Ball* b = static_cast<Ball*>(o);
 				b->moveDirection(b->velocity_);
 
-				std::cout << "b->rotation_ : " << b->rotation_ << std::endl;
+				b->py_ = b->py_ > ScreenHeight() ? 0.0f : b->py_;
+				b->vy_ = b->vy_ > ScreenHeight() ? 0.0f : b->vy_;
+				b->px_ = b->px_ > ScreenWidth() ? 0.0f : b->px_;
+				b->vx_ = b->vx_ > ScreenWidth() ? 0.0f : b->vx_;
 
-				if(b->py_ > ScreenHeight()) b->py_ = 0.0f;
+				b->py_ = b->py_ >= 0.0f ? b->py_ : ScreenHeight();
+				b->vy_ = b->vy_ >= 0.0f ? b->vy_ : ScreenHeight();
+				b->px_ = b->px_ >= 0.0f ? b->px_ : ScreenWidth();
+				b->vx_ = b->vx_ >= 0.0f ? b->vx_ : ScreenWidth();
 			}
 		}
 
@@ -496,6 +529,8 @@ public:
 
 									b->px_ -= cosf((b->px_ - line.first)) * tx;
 									b->py_ -= -sinf((b->py_ - line.second)) * ty;
+
+									break;
 								}
 							}
 						}			
@@ -533,6 +568,12 @@ public:
 		{
 			switch(shapeId)
 			{
+				case MOVE :
+				{
+					boost::shared_ptr<Ball> selected(boost::static_pointer_cast<Ball>(drawingObject));
+					selected->moveDirection( sqrtf( ((selected->px_ - newMousePos.first) * (selected->px_ - newMousePos.first)) + ((selected->py_ - newMousePos.second) * (selected->py_ - newMousePos.second))));
+				}
+
 				case BOX :
 					{
 					boost::shared_ptr<Object> b(new Box(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second));
