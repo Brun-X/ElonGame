@@ -280,7 +280,7 @@ public:
 			}
 			else
 			{
-				makeLine(px_, py_, vx_, vy_, &objectLines_);
+				//makeLine(px_, py_, vx_, vy_, &objectLines_);
 			} 	
 		}
 	}
@@ -317,7 +317,7 @@ public:
 	float vy_;
 	float radius_;
 	float rotation_;
-	float velocity_ = 1.20f;
+	float velocity_ = 0.0f;
 	float acceleration_ = 1.0f;
 
 private:
@@ -342,6 +342,7 @@ private:
 	iPair lastMousePos;
 	bool drawing_ = false;
 	boost::shared_ptr<Object> drawingObject;
+	Ball* selectedBall_ = nullptr;
 
 public:
 	Pico()
@@ -443,18 +444,18 @@ public:
 
 			if(shapeId == MOVE)
 			{
-				for(auto o = objects.begin(); o != objects.end();)
+				for(auto o : objects)
 				{	
-					if((*o)->shape_ == BALL)
+					if(o->shape_ == BALL)
 					{
 						//Ball* b = static_cast<Ball*>(o);
-						if(static_cast<Ball*>(*o)->isPointInsideCircle(lastMousePos.first, lastMousePos.second))
+						if(static_cast<Ball*>(o)->isPointInsideCircle(lastMousePos.first, lastMousePos.second))
 						{
-							drawingObject = boost::shared_ptr<Object>(*o);
-							o = objects.erase(o);
+
+							selectedBall_ = static_cast<Ball*>(o);
+							
 							break;
 						}
-						else ++o;
 					}
 					
 				}
@@ -464,6 +465,11 @@ public:
 		if(GetMouse(0).bHeld) 
 		{
 			newMousePos = {GetMouseX(), GetMouseY()};
+			if(selectedBall_ != nullptr)
+			{
+				selectedBall_->px_ = newMousePos.first;
+				selectedBall_->py_ = newMousePos.second;
+			}
 		}
 
 		if(GetMouse(0).bReleased)
@@ -474,7 +480,7 @@ public:
 
 			else if(shapeId == LINE) objects.push_back(new Line(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second));
 
-			else if(shapeId == MOVE) objects.push_back(drawingObject.get());
+			if(shapeId == MOVE) selectedBall_ = nullptr;
 
 			drawing_ = false;
 			drawingObject.reset();
@@ -487,17 +493,20 @@ public:
 			if(o->shape_ == BALL)
 			{
 				Ball* b = static_cast<Ball*>(o);
-				b->moveDirection(b->velocity_);
+				if(b != selectedBall_)
+				{
+					b->moveDirection(b->velocity_);
 
-				b->py_ = b->py_ > ScreenHeight() ? 0.0f : b->py_;
-				b->vy_ = b->vy_ > ScreenHeight() ? 0.0f : b->vy_;
-				b->px_ = b->px_ > ScreenWidth() ? 0.0f : b->px_;
-				b->vx_ = b->vx_ > ScreenWidth() ? 0.0f : b->vx_;
+					b->py_ = b->py_ > ScreenHeight() ? 0.0f : b->py_;
+					b->vy_ = b->vy_ > ScreenHeight() ? 0.0f : b->vy_;
+					b->px_ = b->px_ > ScreenWidth() ? 0.0f : b->px_;
+					b->vx_ = b->vx_ > ScreenWidth() ? 0.0f : b->vx_;
 
-				b->py_ = b->py_ >= 0.0f ? b->py_ : ScreenHeight();
-				b->vy_ = b->vy_ >= 0.0f ? b->vy_ : ScreenHeight();
-				b->px_ = b->px_ >= 0.0f ? b->px_ : ScreenWidth();
-				b->vx_ = b->vx_ >= 0.0f ? b->vx_ : ScreenWidth();
+					b->py_ = b->py_ >= 0.0f ? b->py_ : ScreenHeight();
+					b->vy_ = b->vy_ >= 0.0f ? b->vy_ : ScreenHeight();
+					b->px_ = b->px_ >= 0.0f ? b->px_ : ScreenWidth();
+					b->vx_ = b->vx_ >= 0.0f ? b->vx_ : ScreenWidth();
+				}
 			}
 		}
 
@@ -511,29 +520,34 @@ public:
 				{
 					if(o != oNested)
 					{						
-						for(auto lines : oNested->objectLines_)
-						{
-							for(auto line : lines)
+						//for(auto lines : oNested->objectLines_)
+						if(oNested->shape_ == BALL)
+						
+							//for(auto line : lines)
 							{
 								Ball* b = static_cast<Ball*>(o);
-								float hyp = sqrtf( ((line.first - b->px_) * (line.first - b->px_)) + ((line.second - b->py_) * (line.second - b->py_)) );
-								if(hyp < b->radius_)
+								Ball* a = static_cast<Ball*>(oNested);
+								float hyp = sqrtf( (fabs(a->px_ - b->px_) * fabs(a->px_ - b->px_)) + (fabs(a->py_ - b->py_) * fabs(a->py_ - b->py_)) );
+								if(hyp < (fabs(a->radius_) + fabs(b->radius_)))
 								{
-									float nx = (b->px_ - line.first) / hyp;
-									float ny = (b->py_ - line.second) / hyp;
+									float nx = (b->px_ - a->px_) / hyp;
+									float ny = (b->py_ - a->py_) / hyp;
 
 									float tx = -ny;
 									float ty = nx;
 
 									//dpTan = line.first * tx + line.second * ty;
 
-									b->px_ -= cosf((b->px_ - line.first)) * tx;
-									b->py_ -= -sinf((b->py_ - line.second)) * ty;
+									a->px_ += 0.6f * cosf((b->px_ - a->py_)) * ((fabs(a->radius_) + fabs(b->radius_)) - hyp);
+									a->py_ += 0.6f * -sinf((b->py_ - a->py_)) * ((fabs(a->radius_) + fabs(b->radius_)) - hyp);
 
-									break;
+									b->px_ -= 0.6f * cosf((b->px_ - a->py_)) * ((fabs(a->radius_) + fabs(b->radius_)) - hyp);
+									b->py_ -= 0.6f * -sinf((b->py_ - a->py_)) * ((fabs(a->radius_) + fabs(b->radius_)) - hyp);
+
+									//break;
 								}
 							}
-						}			
+									
 					}
 				}
 			}
@@ -568,11 +582,12 @@ public:
 		{
 			switch(shapeId)
 			{
+				/*
 				case MOVE :
 				{
-					boost::shared_ptr<Ball> selected(boost::static_pointer_cast<Ball>(drawingObject));
-					selected->moveDirection( sqrtf( ((selected->px_ - newMousePos.first) * (selected->px_ - newMousePos.first)) + ((selected->py_ - newMousePos.second) * (selected->py_ - newMousePos.second))));
-				}
+					selectedBall_->moveDirection( sqrtf( ((selectedBall_->px_ - newMousePos.first) * (selectedBall_->px_ - newMousePos.first)) + ((selectedBall_->py_ - newMousePos.second) * (selectedBall_->py_ - newMousePos.second))));
+					std::cout << "test" << std::endl;
+				}*/
 
 				case BOX :
 					{
