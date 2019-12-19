@@ -280,7 +280,7 @@ public:
 			}
 			else
 			{
-				//makeLine(px_, py_, vx_, vy_, &objectLines_);
+				makeLine(px_, py_, vx_, vy_, &objectLines_);
 			} 	
 		}
 	}
@@ -340,6 +340,7 @@ private:
 	std::vector<Object*> objects;
 	iPair newMousePos;
 	iPair lastMousePos;
+	iPair movingLastMousePos;
 	bool drawing_ = false;
 	boost::shared_ptr<Object> drawingObject;
 	Ball* selectedBall_ = nullptr;
@@ -435,6 +436,7 @@ public:
 		if(GetMouse(0).bPressed) 
 		{
 			lastMousePos = {GetMouseX(), GetMouseY()};
+			movingLastMousePos = {GetMouseX(), GetMouseY()};
 			drawing_ = true;
 
 			if(GetKey(olc::Key::B).bHeld) shapeId = BOX;
@@ -469,6 +471,11 @@ public:
 			{
 				selectedBall_->px_ = newMousePos.first;
 				selectedBall_->py_ = newMousePos.second;
+			
+				selectedBall_->vx_ += (newMousePos.first - movingLastMousePos.first);
+				selectedBall_->vy_ += (newMousePos.second - movingLastMousePos.second);
+			
+				movingLastMousePos = newMousePos;
 			}
 		}
 
@@ -484,6 +491,7 @@ public:
 
 			drawing_ = false;
 			drawingObject.reset();
+			shapeId = MOVE;
 		}
 
 
@@ -512,6 +520,8 @@ public:
 
 		//Collision detection
 
+		std::vector<std::pair<Ball*,Ball*>> ballsCollided;
+
 		for(auto o : objects)
 		{
 			if(o->shape_ == BALL)
@@ -527,24 +537,27 @@ public:
 							{
 								Ball* b = static_cast<Ball*>(o);
 								Ball* a = static_cast<Ball*>(oNested);
-								float hyp = sqrtf( (fabs(a->px_ - b->px_) * fabs(a->px_ - b->px_)) + (fabs(a->py_ - b->py_) * fabs(a->py_ - b->py_)) );
+								float hyp = sqrtf( (a->px_ - b->px_) * (a->px_ - b->px_) + (a->py_ - b->py_) * (a->py_ - b->py_) );
 								if(hyp < (fabs(a->radius_) + fabs(b->radius_)))
 								{
-									float nx = (b->px_ - a->px_) / hyp;
-									float ny = (b->py_ - a->py_) / hyp;
+									
 
-									float tx = -ny;
-									float ty = nx;
+									float overlap = 0.5f * (hyp - a->radius_ - b->radius_);
 
-									//dpTan = line.first * tx + line.second * ty;
+									a->px_ -= overlap * (a->px_ - b->px_) / hyp;
+									a->py_ -= overlap * (a->py_ - b->py_) / hyp;
 
-									a->px_ += 0.6f * cosf((b->px_ - a->py_)) * ((fabs(a->radius_) + fabs(b->radius_)) - hyp);
-									a->py_ += 0.6f * -sinf((b->py_ - a->py_)) * ((fabs(a->radius_) + fabs(b->radius_)) - hyp);
+									a->vx_ -= overlap * (a->px_ - b->px_) / hyp;
+									a->vy_ -= overlap * (a->py_ - b->py_) / hyp;
 
-									b->px_ -= 0.6f * cosf((b->px_ - a->py_)) * ((fabs(a->radius_) + fabs(b->radius_)) - hyp);
-									b->py_ -= 0.6f * -sinf((b->py_ - a->py_)) * ((fabs(a->radius_) + fabs(b->radius_)) - hyp);
+									b->px_ += overlap * (a->px_ - b->px_) / hyp;
+									b->py_ += overlap * (a->py_ - b->py_) / hyp;
 
-									//break;
+									b->vx_ += overlap * (a->px_ - b->px_) / hyp;
+									b->vy_ += overlap * (a->py_ - b->py_) / hyp;
+
+									//ballsCollided.push_back({a,b});
+
 								}
 							}
 									
@@ -552,7 +565,19 @@ public:
 				}
 			}
 		}
+/*
+		//Dynamic collision
+		for(auto col : ballsCollided)
+		{
+			float nx = (b->px_ - a->px_) / hyp;
+			float ny = (b->py_ - a->py_) / hyp;
 
+			float tx = -ny;
+			float ty = nx;
+
+			dpTan = ballsCollided.first-> * tx + line.second * ty;
+		}
+*/
 		//Drawing screen
 
 		for(int x = 0; x < ScreenWidth(); x++)
