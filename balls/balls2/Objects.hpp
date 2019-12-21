@@ -33,7 +33,7 @@ public:
 	float vy_ = 0.0f;
 	float radius_;
 	float rotation_ = 0.0f;
-	float velocity_ = 0.0f;
+	float velocity_ = 30.0f;
 	float acceleration_ = 1.0f;
 	olc::Pixel color_ = olc::WHITE;
 
@@ -318,8 +318,8 @@ public:
 
 		px_ += directionX;
 		py_ += directionY;
-		vx_ += directionX;
-		vy_ += directionY;
+		//vx_ += directionX;
+		//vy_ += directionY;
 	}
 
 	bool isPointInsideCircle(float x, float y)

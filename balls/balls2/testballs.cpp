@@ -78,21 +78,33 @@ public:
 				Ball* b = static_cast<Ball*>(o);
 				if(b != selectedBall_)
 				{
-					b->moveDirection(b->velocity_);
+					//b->moveDirection(b->velocity_);
+
+					//b->rotation_ += 0.40f * fElapsedTime;
+
+					b->vx_ = sinf((0.005f * b->velocity_ + b->px_) * fElapsedTime);
+					b->vy_ = -cosf((0.005f * b->velocity_ + b->py_) * fElapsedTime);
+
+					b->px_ += b->velocity_ * fElapsedTime;
+					b->py_ += b->velocity_ * fElapsedTime;
+
+					
 
 					b->py_ = b->py_ > ScreenHeight() ? 0.0f : b->py_;
-					b->vy_ = b->vy_ > ScreenHeight() ? 0.0f : b->vy_;
+					//b->vy_ = b->vy_ > ScreenHeight() ? 0.0f : b->vy_;
 					b->px_ = b->px_ > ScreenWidth() ? 0.0f : b->px_;
-					b->vx_ = b->vx_ > ScreenWidth() ? 0.0f : b->vx_;
+					//b->vx_ = b->vx_ > ScreenWidth() ? 0.0f : b->vx_;
 
 					b->py_ = b->py_ >= 0.0f ? b->py_ : ScreenHeight();
-					b->vy_ = b->vy_ >= 0.0f ? b->vy_ : ScreenHeight();
+					//b->vy_ = b->vy_ >= 0.0f ? b->vy_ : ScreenHeight();
 					b->px_ = b->px_ >= 0.0f ? b->px_ : ScreenWidth();
-					b->vx_ = b->vx_ >= 0.0f ? b->vx_ : ScreenWidth();
+					//b->vx_ = b->vx_ >= 0.0f ? b->vx_ : ScreenWidth();
+				
+
 				}
 			}
 		}
-		
+
 		//Drawing screen
 
 		for(int x = 0; x < ScreenWidth(); x++)
