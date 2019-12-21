@@ -10,19 +10,12 @@ IMPLEMNTED WITH THE OLCPIXELGAMEENGINE FROM:
 
 #define OLC_PGE_APPLICATION
 
-#ifndef OBJECT_HPP_
-#define OBJECT_HPP_
-
 #include <cmath>
 #include <vector>
 #include <boost/shared_ptr.hpp>
 #include "olcPixelGameEngine.h"
 
-
-
-
 enum { MOVE=0, BALL=1, BOX=2, LINE=3 };
-
 
 typedef std::pair <float, float> fPair;
 typedef std::pair <int, int> iPair;
@@ -36,21 +29,29 @@ public:
 	int shape_ = 0;
 	float px_;
 	float py_;
-	float vx_;
-	float vy_;
+	float vx_ = 0.0f;
+	float vy_ = 0.0f;
 	float radius_;
 	float rotation_ = 0.0f;
 	float velocity_ = 0.0f;
 	float acceleration_ = 1.0f;
 	olc::Pixel color_ = olc::WHITE;
-	
+
+protected:
+
+	Object() {}
+
+	Object(float px, float py, float vx = 0.0f, float vy = 0.0f, float radius = 1.0f) : px_(px), py_(py), vx_(vx), vy_(vy), radius_(radius) {}
+
+public:
+
 	virtual ~Object() {}
 
 	virtual void calculateShape() {}
+	
+	virtual void drawShape(olc::PixelGameEngine* engine) = 0;
 
-	virtual void drawShape() {}
-
-	static bool LlobstidrawLine(float x1, float y1, float x2, float y2, olc::Pixel color)
+	static bool LlobstidrawLine(olc::PixelGameEngine* engine, float x1, float y1, float x2, float y2, olc::Pixel color)
 	{
 		std::vector<iPair> line;
 		float gradientX, gradientY;
@@ -65,7 +66,7 @@ public:
 		gradientY = dy != 0.0f ? dy / dx : 0.0f;
 
 		float tmp = 0.000;
-		float round = 0.8;
+		float round = 0.5;
 
 		if(fabs(gradientX) >= fabs(gradientY))
 		{
@@ -173,9 +174,9 @@ public:
 			}
 		}
 
-		for(auto l : line)
+		for(int i = 0; i < line.size(); i++)
 		{
-			draw(line.first, line.second, color);
+			engine->Draw(line[i].first, line[i].second, color);
 		}
 		return true;
 	}
@@ -229,10 +230,10 @@ public:
 
 	virtual void calculateShape() override {}
 
-	virtual void drawShape() override
+	virtual void drawShape(olc::PixelGameEngine * engine) override
 	{
-		std::vector<fPair> t = translatePolygon(objectModel_, px_, py_, 0.0f, 1.0f)
-		LlobstidrawLine(t[0].first, t[0].second, t[1].first, t[1].second, color_);
+		std::vector<fPair> t = translatePolygon(objectModel_, px_, py_, 0.0f, 1.0f);
+		LlobstidrawLine(engine, t[0].first, t[0].second, t[1].first, t[1].second, color_);
 	}
 };
 
@@ -244,31 +245,27 @@ public:
 	Box(float x1, float y1, float x2, float y2)
 	{
 		shape_ = BOX;
+
+		float startX = x1 < x2 ? x1 : x2;
+		float startY = y1 < y2 ? y1 : y2;
+
+		px_ = fabs(x1 - x2) / 2 + startX;
+		py_ = fabs(y1 - y2) / 2 + startY;
 	
 		objectModel_.push_back({x1, y1});
 		objectModel_.push_back({x2, y1});
 		objectModel_.push_back({x2, y2});
 		objectModel_.push_back({x1, y2});
-
-		/*
-		makeLine(x1_, y1_, x2_, y1_, &objectLines_);
-		makeLine(x2_, y1_, x2_, y2_, &objectLines_);
-		makeLine(x2_, y2_, x1_, y2_, &objectLines_);
-		makeLine(x1_, y2_, x1_, y1_, &objectLines_);
-		*/
-		
 	}
 
-	virtual void calculateShape() override {}
-
-	virtual void drawShape() override
+	virtual void drawShape(olc::PixelGameEngine * engine) override
 	{
-		std::vector<fPair> t = translatePolygon(objectModel_, px_, py_, rotation_, 1.0f)
+		std::vector<fPair> t = translatePolygon(objectModel_, px_, py_, rotation_, 1.0f);
 		int verts = t.size();
 		for(int i = 0; i < verts + 1; i++)
 		{
 			int j = i + 1;
-			LlobstidrawLine(t[i % verts].first, t[i % verts].second, t[j % verts].first, t[j % verts].second, color_);
+			LlobstidrawLine(engine, t[i % verts].first, t[i % verts].second, t[j % verts].first, t[j % verts].second, color_);
 		}
 	}
 };
@@ -276,30 +273,19 @@ public:
 class Ball : public Object
 {
 public:
+
 	Ball() : Object() {}
 
-	Ball(float px, float py, float vx = 0.0f, float vy = 0.0f, float radius) : px_(px), py_(py), vx_(vx), vy_(vy), radius_(radius)
+	Ball(float px, float py, float vx = 0.0f, float vy = 0.0f, float radius = 0.0f) : Object(px, py, vx, vy, radius) 
 	{
 		shape_ = BALL;
 
-		if(radius < 0)
+		if(radius_ < 0)
 		{
-			radius_ = sqrt((fabs(px - vx) * fabs(px - vx)) + (fabs(py - vy) * fabs(py - vy)));
+			radius_ = sqrt((fabs(px_ - vx_) * fabs(px_ - vx_)) + (fabs(py_ - vy_) * fabs(py_ - vy_)));
 			radius_ = px_ < vx_ ? radius_ : -radius_;
 
-			rotation_ = atan2f((vy_ - py_) / (vx_ - px_));
-
-			/*
-			rotation_ = acosf(fabs((vx_ - px_)) / radius_);
-			if(vy_ > py_ && radius_ > 0.0f) rotation_ = (2 * M_PI) - rotation_;
-			else if(vy_ > py_ && radius_ < 0.0f) rotation_ = -rotation_;
-			*/
-		}
-
-		else if(radius_ > 0.0f)
-		{
-			vx_ = px_ + radius_;
-			vy_ = py_ + radius_;
+			rotation_ = atan2f((vy_ - py_), (vx_ - px_));
 		}
 
 		int verts = vecModel_.size();
@@ -312,56 +298,21 @@ public:
 
 	}
 
-	virtual void calculateShape() override 
+	virtual void drawShape(olc::PixelGameEngine * engine) override
 	{
-		/*
-		float pointX, pointY;
-		float lastX = vecModel_[1].first * radius_ + px_;
-		float lastY = vecModel_[1].second * radius_ + py_;
-		objectLines_.clear();
-*/
-		/*
-		for(int s = 0; s < circlePoints + 1; s++)
-		{
-			if(s > 1) 
-			{
-				pointX = (vecModel_[s + 1].first * radius_) + px_;
-				pointY = (vecModel_[s + 1].second * radius_) + py_;
-				
-				makeLine(lastX, lastY, pointX, pointY, &objectLines_);
-				
-				pointX = s < circlePoints + 1 ? pointX : vecModel_[1].first * radius_ + px_;
-				pointY = s < circlePoints + 1 ? pointY : vecModel_[1].second * radius_ + py_;
-				lastX = pointX;
-				lastY = pointY;
-			}
-			else
-			{
-				makeLine(px_, py_, vx_, vy_, &objectLines_);
-			} 	
-		}*/
-	}
-
-	virtual void drawShape() override
-	{
-		std::vector<fPair> t = translatePolygon(objectModel_, px_, py_, rotation_, 1.0f)
+		rotation_ = atan2f(vy_, vx_);
+		std::vector<fPair> t = translatePolygon(objectModel_, px_, py_, rotation_, 1.0f);
 		int verts = t.size();
-		for(int i = 0; i < verts + 1; i++)
+		for(int i = 1; i < verts; i++)
 		{
 			int j = i + 1;
-			LlobstidrawLine(t[i % verts].first, t[i % verts].second, t[j % verts].first, t[j % verts].second, color_);
+			LlobstidrawLine(engine, t[i % (verts - 1)].first, t[i % (verts - 1)].second, t[j % (verts - 1)].first, t[j % (verts - 1)].second, color_);
 		}
 	}
 
 
 	void moveDirection(float stepSize)
 	{
-/*
-		rotation_ = acosf(fabs((vx_ - px_)) / radius_);
-		if(vy_ > py_ && radius_ > 0.0f) rotation_ = (2 * M_PI) - rotation_;
-		else if(vy_ > py_ && radius_ < 0.0f) rotation_ = -rotation_;
-*/
-
 		float directionX = cosf(rotation_) * stepSize;
 		float directionY = -sinf(rotation_) * stepSize;
 
@@ -376,16 +327,6 @@ public:
 		return sqrtf(((px_ - x) * (px_ - x)) + ((py_ - y) * (py_ - y))) < fabs(radius_) ? true : false;
 	}
 
-public:
-/*	float px_;
-	float py_;
-	float vx_;
-	float vy_;
-	float radius_;
-	float rotation_;
-	float velocity_ = 0.0f;
-	float acceleration_ = 1.0f;
-*/
 private:
 	static std::vector<fPair> vecModel_;
 };
@@ -404,5 +345,3 @@ std::vector<fPair> makeUnitCircle()
 }
 
 std::vector<fPair> Ball::vecModel_ = makeUnitCircle();
-
-#endif //_OBJECT_HPP
