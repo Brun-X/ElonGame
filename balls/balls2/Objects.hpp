@@ -15,7 +15,7 @@ IMPLEMNTED WITH THE OLCPIXELGAMEENGINE FROM:
 #include <boost/shared_ptr.hpp>
 #include "olcPixelGameEngine.h"
 
-enum { MOVE=0, BALL=1, BOX=2, LINE=3 };
+enum { MOVE=0, BALL=1, BOX=2, LINE=3, RESIZE=4, NONE=99 };
 
 typedef std::pair <float, float> fPair;
 typedef std::pair <int, int> iPair;
@@ -48,6 +48,8 @@ public:
 	virtual ~Object() {}
 
 	virtual void calculateShape() {}
+
+	virtual bool isPointInsideObject() {return false;}
 	
 	virtual void drawShape(olc::PixelGameEngine* engine) = 0;
 
@@ -239,34 +241,151 @@ public:
 
 class Box : public Object
 {
+protected:
+	float x1_;
+	float y1_;
+	float x2_;
+	float y2_;
+
 public:
+
+	enum {NW = 0, NE = 1, SW = 2, SE = 3};
+
 	Box() : Object() {};
 
 	Box(float x1, float y1, float x2, float y2)
 	{
 		shape_ = BOX;
 
-		float startX = x1 < x2 ? x1 : x2;
-		float startY = y1 < y2 ? y1 : y2;
+		bool leftmostX = x1 < x2 ? true : false;
+		bool uppermostY = y1 < y2 ? true : false;
+
+		float startX = leftmostX == true ? x1 : x2;
+		float startY = uppermostY == true ? y1 : y2;
 
 		px_ = fabs(x1 - x2) / 2 + startX;
 		py_ = fabs(y1 - y2) / 2 + startY;
 	
-		objectModel_.push_back({x1, y1});
-		objectModel_.push_back({x2, y1});
-		objectModel_.push_back({x2, y2});
-		objectModel_.push_back({x1, y2});
+		x1_ = startX;
+		y1_ = startY;
+
+		x2_ = leftmostX == true ? x2 : x1;
+		y2_ = uppermostY == true ? y2 : y1;
+
+		objectModel_.push_back({x1_, y1_});
+		objectModel_.push_back({x2_, y1_});
+		objectModel_.push_back({x1_, y2_});
+		objectModel_.push_back({x2_, y2_});
+	}
+
+	virtual void resizeObject(int cornor, iPair mouse)
+	{
+
+		if(cornor >= 0 && cornor < 4)
+		{		
+			float Length = objectModel_[NE].first - objectModel_[NW].first;
+			float Height = objectModel_[SW].second - objectModel_[NW].second;
+			float offsetX = px_ - Length / 2;
+			float offsetY = py_ - Height / 2;
+
+			fPair castedMouse = static_cast<fPair>(mouse);
+			switch(cornor)
+			{
+				case NW :
+				objectModel_[NW] = castedMouse;
+				objectModel_[NE].second = castedMouse.second;
+				objectModel_[SW].first = castedMouse.first;
+				break;
+
+				case NE :
+				objectModel_[NE] = castedMouse;
+				objectModel_[NW].second = castedMouse.second;
+				objectModel_[SE].first = castedMouse.first;
+				break;
+
+				case SW :
+				objectModel_[SW] = castedMouse;
+				objectModel_[SE].second = castedMouse.second;
+				objectModel_[NW].first = castedMouse.first;
+				break;
+
+				case SE :
+				objectModel_[SE] = castedMouse;
+				objectModel_[SW].second = castedMouse.second;
+				objectModel_[NE].first = castedMouse.first;
+				break;
+			}
+
+			//px_ = Length / 2 + objectModel_[NW].first;
+			//py_ = Height / 2 + objectModel_[NE].second;
+		}
+
+
 	}
 
 	virtual void drawShape(olc::PixelGameEngine * engine) override
 	{
-		std::vector<fPair> t = translatePolygon(objectModel_, px_, py_, rotation_, 1.0f);
-		int verts = t.size();
+		//std::vector<fPair> t = translatePolygon(objectModel_, px_, py_, rotation_, 1.0f);
+		//objectModel_ = t;
+		std::vector<fPair> t = objectModel_;
+
+		px_ = fabs(objectModel_[NE].first - objectModel_[NW].first) / 2 + objectModel_[NW].first;
+		py_ = fabs(objectModel_[SW].second - objectModel_[NW].second) / 2 + objectModel_[NW].second;
+/*		int verts = t.size();
 		for(int i = 0; i < verts + 1; i++)
 		{
 			int j = i + 1;
 			LlobstidrawLine(engine, t[i % verts].first, t[i % verts].second, t[j % verts].first, t[j % verts].second, color_);
+*/
+			LlobstidrawLine(engine, t[NW].first, t[NW].second, t[NE].first, t[NE].second, color_);
+			LlobstidrawLine(engine, t[NE].first, t[NE].second, t[SE].first, t[SE].second, color_);
+			LlobstidrawLine(engine, t[SE].first, t[SE].second, t[SW].first, t[SW].second, color_);
+			LlobstidrawLine(engine, t[SW].first, t[SW].second, t[NW].first, t[NW].second, color_);
+		//}
+	}
+
+	virtual bool isPointInsideObject(int* cornor, fPair mouse)
+	{
+		int locatorX = 0;
+		int locatorY = 0;
+		bool isIn = false;
+		float Length = objectModel_[NE].first - objectModel_[NW].first;
+		float Height = objectModel_[SW].second - objectModel_[NW].second;
+		float offsetX = px_ - Length / 2;
+		float offsetY = py_ - Height / 2;
+		//std::vector<fPair> translatedObjectModel_;
+		//translatedObjectModel_.resize(objectModel_.size());
+		//translatedObjectModel_ = translatePolygon(objectModel_, px_, py_, rotation_, 1.0f);
+
+		std::cout << "mouse.first: " << mouse.first << "\tobjectModel_[NW].first: " << objectModel_[NW].first << std::endl;
+
+		if((mouse.first > objectModel_[NW].first) && (mouse.first < ((Length / 2) + objectModel_[NW].first)))  
+		{
+			std::cout << "mouse.first: " << mouse.first << "\tobjectModel_[NW].first: " << objectModel_[NW].first << std::endl;
+			locatorX = 0;
+			isIn = true;
 		}
+
+		else if((mouse.first >= (Length / 2) + objectModel_[NW].first) && (mouse.first < objectModel_[NE].first))
+		{
+			locatorX = 1;
+			isIn = true;
+		} 
+
+		if((mouse.second >= objectModel_[NW].second) && (mouse.second < (Height / 2) + objectModel_[NW].second)) 
+		{
+			locatorY = 0;
+			isIn = true;
+		}
+
+		else if((mouse.second >= (Height / 2) + objectModel_[NW].second) && (mouse.second < objectModel_[SW].second))
+		{
+			locatorY = 2;
+			isIn = true;
+		}
+
+		*cornor = locatorX + locatorY;
+		return isIn;
 	}
 };
 
@@ -300,7 +419,7 @@ public:
 
 	virtual void drawShape(olc::PixelGameEngine * engine) override
 	{
-		rotation_ = atan2f(vy_, vx_);
+		//rotation_ = atan2f(vy_, vx_);
 		std::vector<fPair> t = translatePolygon(objectModel_, px_, py_, rotation_, 1.0f);
 		int verts = t.size();
 		for(int i = 1; i < verts; i++)
@@ -313,18 +432,22 @@ public:
 
 	void moveDirection(float stepSize)
 	{
+
+
+		
 		float directionX = cosf(rotation_) * stepSize;
-		float directionY = -sinf(rotation_) * stepSize;
+		float directionY = sinf(rotation_) * stepSize;
 
 		px_ += directionX;
 		py_ += directionY;
+		
 		//vx_ += directionX;
 		//vy_ += directionY;
 	}
 
-	bool isPointInsideCircle(float x, float y)
+	virtual bool isPointInsideObject(fPair mouse)
 	{
-		return sqrtf(((px_ - x) * (px_ - x)) + ((py_ - y) * (py_ - y))) < fabs(radius_) ? true : false;
+		return sqrtf(((px_ - mouse.first) * (px_ - mouse.first)) + ((py_ - mouse.second) * (py_ - mouse.second))) < fabs(radius_) ? true : false;
 	}
 
 private:
