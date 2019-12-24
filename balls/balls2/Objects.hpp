@@ -33,7 +33,7 @@ public:
 	float vy_ = 0.0f;
 	float radius_;
 	float rotation_ = 0.0f;
-	float velocity_ = 30.0f;
+	float velocity_ = 50.0f;
 	float acceleration_ = 1.0f;
 	olc::Pixel color_ = olc::WHITE;
 
@@ -250,6 +250,9 @@ protected:
 public:
 
 	enum {NW = 0, NE = 1, SW = 2, SE = 3};
+	std::vector<fPair> sortedByFirst_;
+	std::vector<fPair> sortedBySecond_;
+	float lastPx_, lastPy_;
 
 	Box() : Object() {};
 
@@ -257,39 +260,49 @@ public:
 	{
 		shape_ = BOX;
 
-		bool leftmostX = x1 < x2 ? true : false;
-		bool uppermostY = y1 < y2 ? true : false;
+		
 
-		float startX = leftmostX == true ? x1 : x2;
-		float startY = uppermostY == true ? y1 : y2;
+		objectModel_.push_back({x1, y1});
+		objectModel_.push_back({x2, y1});
+		objectModel_.push_back({x1, y2});
+		objectModel_.push_back({x2, y2});
 
-		px_ = fabs(x1 - x2) / 2 + startX;
-		py_ = fabs(y1 - y2) / 2 + startY;
-	
-		x1_ = startX;
-		y1_ = startY;
+		rearrangeCoordinates();
+		for(int i = 0; i < objectModel_.size(); i++) std::cout << objectModel_[i].first << " - " << objectModel_[i].second << std::endl;
 
-		x2_ = leftmostX == true ? x2 : x1;
-		y2_ = uppermostY == true ? y2 : y1;
+		px_ = ((objectModel_[NE].first - objectModel_[NW].first) / 2) + objectModel_[NW].first;
+		py_ = ((objectModel_[SW].second - objectModel_[NW].second) / 2) + objectModel_[NW].second;
+		
+		radius_ = sqrtf((px_ - objectModel_[NW].first) * (px_ - objectModel_[NW].first) + (py_ - objectModel_[NW].second) * (py_ - objectModel_[NW].second));
+		vx_ = cosf(rotation_);
+		vy_ = sinf(rotation_);
 
-		objectModel_.push_back({x1_, y1_});
-		objectModel_.push_back({x2_, y1_});
-		objectModel_.push_back({x1_, y2_});
-		objectModel_.push_back({x2_, y2_});
+		lastPx_ = px_;
+		lastPy_ = py_;
+		std::cout << "px_ : " << px_ << " - py_ : " << py_ << std::endl;
 	}
 
-	virtual void resizeObject(int cornor, iPair mouse)
+	void rearrangeCoordinates()
+	{
+		sortedByFirst_ = objectModel_;
+		std::sort(sortedByFirst_.begin(), sortedByFirst_.end());
+		sortedBySecond_ = objectModel_;
+		std::sort(sortedBySecond_.begin(), sortedBySecond_.end(), [](auto &left, auto &right) {return left.second < right.second;});
+
+		objectModel_[NW] = {sortedByFirst_[0].first, sortedBySecond_[0].second};
+		objectModel_[NE] = {sortedByFirst_[2].first, sortedBySecond_[1].second};
+		objectModel_[SW] = {sortedByFirst_[1].first, sortedBySecond_[2].second};
+		objectModel_[SE] = {sortedByFirst_[3].first, sortedBySecond_[3].second};
+	}
+
+	virtual void resizeObject(int corner, iPair mouse)
 	{
 
-		if(cornor >= 0 && cornor < 4)
+		if(corner >= 0 && corner < 4)
 		{		
-			float Length = objectModel_[NE].first - objectModel_[NW].first;
-			float Height = objectModel_[SW].second - objectModel_[NW].second;
-			float offsetX = px_ - Length / 2;
-			float offsetY = py_ - Height / 2;
 
 			fPair castedMouse = static_cast<fPair>(mouse);
-			switch(cornor)
+			switch(corner)
 			{
 				case NW :
 				objectModel_[NW] = castedMouse;
@@ -316,76 +329,86 @@ public:
 				break;
 			}
 
-			//px_ = Length / 2 + objectModel_[NW].first;
-			//py_ = Height / 2 + objectModel_[NE].second;
+			rearrangeCoordinates();		
+			setCenterAfterResize();
 		}
+	}
 
-
+	void setCenterAfterResize()
+	{
+		px_ = objectModel_[NW].first + fabs(objectModel_[NE].first - objectModel_[NW].first) / 2;
+		py_ = objectModel_[NW].second + fabs(objectModel_[SW].second - objectModel_[NW].second) / 2;
+		lastPx_ = px_;
+		lastPy_ = py_;
 	}
 
 	virtual void drawShape(olc::PixelGameEngine * engine) override
 	{
-		//std::vector<fPair> t = translatePolygon(objectModel_, px_, py_, rotation_, 1.0f);
-		//objectModel_ = t;
-		std::vector<fPair> t = objectModel_;
+		float offsetX = px_ - lastPx_;
+		float offsetY = py_ - lastPy_;
 
-		px_ = fabs(objectModel_[NE].first - objectModel_[NW].first) / 2 + objectModel_[NW].first;
-		py_ = fabs(objectModel_[SW].second - objectModel_[NW].second) / 2 + objectModel_[NW].second;
-/*		int verts = t.size();
-		for(int i = 0; i < verts + 1; i++)
-		{
-			int j = i + 1;
-			LlobstidrawLine(engine, t[i % verts].first, t[i % verts].second, t[j % verts].first, t[j % verts].second, color_);
-*/
-			LlobstidrawLine(engine, t[NW].first, t[NW].second, t[NE].first, t[NE].second, color_);
-			LlobstidrawLine(engine, t[NE].first, t[NE].second, t[SE].first, t[SE].second, color_);
-			LlobstidrawLine(engine, t[SE].first, t[SE].second, t[SW].first, t[SW].second, color_);
-			LlobstidrawLine(engine, t[SW].first, t[SW].second, t[NW].first, t[NW].second, color_);
-		//}
+		std::vector<fPair> t = translatePolygon(objectModel_, offsetX, offsetY, rotation_, 1.0f);
+		objectModel_ = t;
+
+		LlobstidrawLine(engine, t[NW].first, t[NW].second, t[NE].first, t[NE].second, color_);
+		LlobstidrawLine(engine, t[NE].first, t[NE].second, t[SE].first, t[SE].second, color_);
+		LlobstidrawLine(engine, t[SE].first, t[SE].second, t[SW].first, t[SW].second, color_);
+		LlobstidrawLine(engine, t[SW].first, t[SW].second, t[NW].first, t[NW].second, color_);
+
+		lastPx_ = px_;
+		lastPy_ = py_;
+
 	}
 
-	virtual bool isPointInsideObject(int* cornor, fPair mouse)
+	virtual bool isPointInsideObject(int* corner, fPair mouse)
 	{
-		int locatorX = 0;
-		int locatorY = 0;
-		bool isIn = false;
-		float Length = objectModel_[NE].first - objectModel_[NW].first;
-		float Height = objectModel_[SW].second - objectModel_[NW].second;
-		float offsetX = px_ - Length / 2;
-		float offsetY = py_ - Height / 2;
-		//std::vector<fPair> translatedObjectModel_;
-		//translatedObjectModel_.resize(objectModel_.size());
-		//translatedObjectModel_ = translatePolygon(objectModel_, px_, py_, rotation_, 1.0f);
+		float x1 = objectModel_[NW].first;
+		float y1 = objectModel_[NW].second;
+		float x2 = objectModel_[SE].first;
+		float y2 = objectModel_[SE].second;
 
-		std::cout << "mouse.first: " << mouse.first << "\tobjectModel_[NW].first: " << objectModel_[NW].first << std::endl;
-
-		if((mouse.first > objectModel_[NW].first) && (mouse.first < ((Length / 2) + objectModel_[NW].first)))  
+		float Length = x2 - x1;
+		float Height = y2 - y1;
+		
+		if((mouse.first > x1) && (mouse.first < ((Length / 2) + x1)))  
 		{
-			std::cout << "mouse.first: " << mouse.first << "\tobjectModel_[NW].first: " << objectModel_[NW].first << std::endl;
-			locatorX = 0;
-			isIn = true;
+			if(mouse.second > y1 && mouse.second < (Height / 2 + y1))
+			{
+				//std::cout << "mouse.second: " << mouse.second << "\tobjectModel_[SW].second: " << objectModel_[SW].second << std::endl;
+				//std::cout << "mouse.second : " << mouse.second << " - y1 : " << y1 << std::endl;
+				*corner = 0;
+				return true;
+			}
+
+			else if(mouse.second >= (y1 + Height / 2) && mouse.second < y2)
+			{
+				//std::cout << "mouse.second: " << mouse.second << "\tobjectModel_[SE].second: " << objectModel_[SE].second << std::endl;
+				//std::cout << "mouse.second : " << mouse.second << " - y2 : " << y2 << std::endl;
+				*corner = 2;
+				return true;
+			}
 		}
 
-		else if((mouse.first >= (Length / 2) + objectModel_[NW].first) && (mouse.first < objectModel_[NE].first))
+		else if((mouse.first >= (x1 + Length / 2)) && (mouse.first < x2)) 
 		{
-			locatorX = 1;
-			isIn = true;
+			if(mouse.second > y1 && mouse.second < (Height / 2 + y1))
+			{
+				//std::cout << "mouse.second: " << mouse.second << "\tobjectModel_[SW].second: " << objectModel_[SW].second << std::endl;
+				//std::cout << "mouse.second : " << mouse.second << " - y1 : " << y1 << std::endl;
+				*corner = 1;
+				return true;
+			}
+
+			else if(mouse.second >= (y1 + Height / 2) && mouse.second < y2)
+			{
+				//std::cout << "mouse.second: " << mouse.second << "\tobjectModel_[SE].second: " << objectModel_[SE].second << std::endl;
+				//std::cout << "mouse.second : " << mouse.second << " - y2 : " << y2 << std::endl;
+				*corner = 3;
+				return true;
+			}
 		} 
 
-		if((mouse.second >= objectModel_[NW].second) && (mouse.second < (Height / 2) + objectModel_[NW].second)) 
-		{
-			locatorY = 0;
-			isIn = true;
-		}
-
-		else if((mouse.second >= (Height / 2) + objectModel_[NW].second) && (mouse.second < objectModel_[SW].second))
-		{
-			locatorY = 2;
-			isIn = true;
-		}
-
-		*cornor = locatorX + locatorY;
-		return isIn;
+		return false;
 	}
 };
 

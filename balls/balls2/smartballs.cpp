@@ -15,13 +15,14 @@ private:
 	std::vector<iPair> grid_;
 	int gridSize_ = 32;
 	unsigned int shapeId = 0;
-	std::vector<Object*> objects;
+	std::vector< boost::shared_ptr<Object> > objects;
 	iPair newMousePos;
 	iPair lastMousePos;
 	iPair movingLastMousePos;
 	bool drawing_ = false;
 	boost::shared_ptr<Object> drawingObject;
-	Object** selectedObject_ = nullptr;
+	//Object** selectedObject_ = nullptr;
+	boost::shared_ptr<Object> selectedObject_;
 	int selectedType_ = NONE;
 	int boxcorner_ = NONE;
 
@@ -42,13 +43,12 @@ public:
 		}
 
 
-		objects.push_back(new Box(20.0f, 20.0f, 150.0f, 150.0f));
+		objects.push_back(boost::shared_ptr<Object> (new Box(20.0f, 20.0f, 150.0f, 150.0f)));
 
 
-		
 		for(int i = 0; i < 60; i++)
 		{
-			objects.push_back( new Ball(((rand() + 10) % (ScreenWidth() - 10)), ((rand() + 10) % (ScreenHeight() - 10)), 0.0, 0.0, (float)((1 + (rand() % 5)) * 8)));
+			objects.push_back(boost::shared_ptr<Object> (new Ball(((rand() + 10) % (ScreenWidth() - 10)), ((rand() + 10) % (ScreenHeight() - 10)), 0.0, 0.0, (float)((1 + (rand() % 5)) * 8))));
 			
 		}
 	
@@ -94,9 +94,9 @@ public:
 					if(o->shape_ == BALL)
 					{
 						//Ball* b = static_cast<Ball*>(o);
-						if(static_cast<Ball*>(o)->isPointInsideObject(lastMousePos))
+						if(boost::static_pointer_cast<Ball>(o)->isPointInsideObject(lastMousePos))
 						{
-							selectedObject_ = &o;
+							selectedObject_ = o;
 							selectedType_ = BALL;
 							break;
 						}
@@ -104,9 +104,10 @@ public:
 
 					else if(o->shape_ == BOX)
 					{
-						if(static_cast<Box*>(o)->isPointInsideObject(&boxcorner_, lastMousePos))
+						if(boost::static_pointer_cast<Box>(o)->isPointInsideObject(&boxcorner_, lastMousePos))
 						{
-							selectedObject_ = &o;
+							//std::cout << "selectedObject_ got box ptr" << std::endl;
+							selectedObject_ = o;
 							selectedType_ = BOX;
 							break;
 						}
@@ -122,21 +123,21 @@ public:
 			newMousePos = {GetMouseX(), GetMouseY()};
 			if(shapeId == MOVE)
 			{
-				if((selectedType_ == BALL) && (*selectedObject_ != nullptr))
+				if((selectedType_ == BALL) && (selectedObject_ != nullptr))
 				{
-					(*selectedObject_)->px_ = newMousePos.first;
-					(*selectedObject_)->py_ = newMousePos.second;
+					selectedObject_->px_ = newMousePos.first;
+					selectedObject_->py_ = newMousePos.second;
 				
-					(*selectedObject_)->vx_ += (newMousePos.first - movingLastMousePos.first);
-					(*selectedObject_)->vy_ += (newMousePos.second - movingLastMousePos.second);
+					selectedObject_->vx_ += (newMousePos.first - movingLastMousePos.first);
+					selectedObject_->vy_ += (newMousePos.second - movingLastMousePos.second);
 				
 					movingLastMousePos = newMousePos;
 				}
 
-				else if((selectedType_ == BOX) && (*selectedObject_ != nullptr))
+				else if((selectedType_ == BOX) && (selectedObject_ != nullptr))
 				{
-					(*selectedObject_)->px_ = newMousePos.first;
-					(*selectedObject_)->py_ = newMousePos.second;
+					(selectedObject_)->px_ = newMousePos.first;
+					(selectedObject_)->py_ = newMousePos.second;
 				
 					//selectedObject_->vx_ += (newMousePos.first - movingLastMousePos.first);
 					//selectedObject_->vy_ += (newMousePos.second - movingLastMousePos.second);
@@ -150,7 +151,7 @@ public:
 				{
 					int dummy;
 					//selectedBox_->isPointInsideObject(&dummy, newMousePos);
-					static_cast<Box*>(*selectedObject_)->resizeObject(boxcorner_, newMousePos);
+					boost::static_pointer_cast<Box>(selectedObject_)->resizeObject(boxcorner_, newMousePos);
 				} 
 				//std::cout << boxcorner << std::endl;
 			}
@@ -158,45 +159,49 @@ public:
 
 		if(GetMouse(0).bReleased)
 		{
-			/*
-			if(shapeId == BOX) objects.push_back(new Box(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second));
 			
-			else if(shapeId == BALL) objects.push_back(new Ball((float)lastMousePos.first, (float) lastMousePos.second, (float) newMousePos.first, (float) newMousePos.second, -1.0f, 0.0f));
+			//if(shapeId == BOX) objects.push_back(new Box(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second));
+			
+			//else if(shapeId == BALL) objects.push_back(new Ball((float)lastMousePos.first, (float) lastMousePos.second, (float) newMousePos.first, (float) newMousePos.second, -1.0f, 0.0f));
 
-			else if(shapeId == LINE) objects.push_back(new Line(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second));
-*/
+			//else if(shapeId == LINE) objects.push_back(new Line(lastMousePos.first, lastMousePos.second, newMousePos.first, newMousePos.second));
 
 
-			//if(shapeId == MOVE)
-			//{
-				selectedObject_ = nullptr;
-				//selectedBox_ = nullptr;
-				//selectedBall_ = nullptr;
-				//selectedType_ = NONE;
-			//}
+
+			if(shapeId == RESIZE)
+			{
+				if(selectedType_ == BOX)
+				{
+					//boost::static_pointer_cast<Box>(selectedObject_)->setCenterAfterResize()r;
+				}
+
+			}
 //			drawing_ = false;
 //			drawingObject.reset();
+			selectedObject_.reset();
 			shapeId = MOVE;
 			boxcorner_ = NONE;
+			selectedType_ = NONE;
+			//std::cout << "selectedType_: " << selectedObject_ << std::endl;
 		}
 
 
 		//Resolve physics
-		/*
+		
 		for(auto b : objects)
 		{
 
-					//b->moveDirection(b->velocity_);
+					
 					srand(time(0));
 					float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
-					//b->rotation_ += r * b->radius_ * fElapsedTime * 0.1f;
+					b->rotation_ += r * b->radius_ * fElapsedTime * 0.1f;
 
 					b->vx_ = cosf(b->rotation_);
 					b->vy_ = sinf(b->rotation_);
 
-					b->px_ += b->vx_ * b->velocity_ * fElapsedTime;
-					b->py_ += b->vy_ * b->velocity_ * fElapsedTime;
+					b->px_ += b->vx_ * b->velocity_ * fElapsedTime * (r + 0.7f);
+					b->py_ += b->vy_ * b->velocity_ * fElapsedTime * (r + 0.6f);
 
 					//static_cast<Ball*>(b)->moveDirection(b->velocity_ * fElapsedTime);
 
@@ -209,23 +214,23 @@ public:
 					//b->vy_ = b->vy_ >= 0.0f ? b->vy_ : ScreenHeight();
 					b->px_ = b->px_ >= 0.0f ? b->px_ : ScreenWidth();
 					//b->vx_ = b->vx_ >= 0.0f ? b->vx_ : ScreenWidth();
-		}*/
+		}
 
 		
 
 
-		for(auto o : objects)
+		for(auto &b : objects)
 		{
-			if(o->shape_ == BALL)
+			if(b->shape_ == BALL)
 			{
-				for(auto oNested : objects)
+				for(auto a : objects)
 				{
-					if(o != oNested)
+					if(b != a)
 					{						
-						if(oNested->shape_ == BALL)
+						if(a->shape_ == BALL)
 							{
-								Ball* b = static_cast<Ball*>(o);
-								Ball* a = static_cast<Ball*>(oNested);
+								//Ball* b = static_cast<Ball*>(o);
+								//Ball* a = static_cast<Ball*>(oNested);
 								float hyp = sqrtf( (a->px_ - b->px_) * (a->px_ - b->px_) + (a->py_ - b->py_) * (a->py_ - b->py_) );
 								if(hyp < (fabs(a->radius_) + fabs(b->radius_)))
 								{
