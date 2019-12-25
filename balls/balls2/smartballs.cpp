@@ -43,15 +43,15 @@ public:
 		}
 
 
-		objects.push_back(boost::shared_ptr<Object> (new Box(20.0f, 20.0f, 150.0f, 150.0f)));
+		objects.push_back(boost::shared_ptr<Object> (new Box(300.0f, 300.0f, 370.0f, 370.0f)));
 
-
+/*
 		for(int i = 0; i < 60; i++)
 		{
 			objects.push_back(boost::shared_ptr<Object> (new Ball(((rand() + 10) % (ScreenWidth() - 10)), ((rand() + 10) % (ScreenHeight() - 10)), 0.0, 0.0, (float)((1 + (rand() % 5)) * 8))));
 			
 		}
-	
+*/	
 
 		SetPixelMode(olc::Pixel::NORMAL);
 
@@ -195,15 +195,14 @@ public:
 					srand(time(0));
 					float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
-					b->rotation_ += r * b->radius_ * fElapsedTime * 0.1f;
+					b->rotation_ = r * fElapsedTime * 0.1f;
 
 					b->vx_ = cosf(b->rotation_);
 					b->vy_ = sinf(b->rotation_);
 
-					b->px_ += b->vx_ * b->velocity_ * fElapsedTime * (r + 0.7f);
-					b->py_ += b->vy_ * b->velocity_ * fElapsedTime * (r + 0.6f);
+					//b->px_ += b->vx_ * b->velocity_ * fElapsedTime * (r + 0.6f);
+					//b->py_ += b->vy_ * b->velocity_ * fElapsedTime * (r + 0.6f);
 
-					//static_cast<Ball*>(b)->moveDirection(b->velocity_ * fElapsedTime);
 
 					b->py_ = b->py_ > ScreenHeight() ? 0.0f : b->py_;
 					//b->vy_ = b->vy_ > ScreenHeight() ? 0.0f : b->vy_;
