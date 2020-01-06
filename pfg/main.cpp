@@ -14,6 +14,7 @@ IMPLEMNTED WITH THE OLCPIXELGAMEENGINE FROM:
 #define __LINUX__
 
 #include "olcPixelGameEngine.h"
+#include <boost/shared_ptr.hpp>
 
 
 
@@ -29,6 +30,9 @@ struct SpritePosition
 	float velY = 0.0f;
 	float acc = 0.0f;
 	bool onGround = false;
+	float spriteFrameCounter = 0.0f;
+	int spriteNo = 0;
+	std::vector<boost::shared_ptr<olc::Sprite>> sprites;
 };
 
 class Pico : public olc::PixelGameEngine
@@ -37,8 +41,11 @@ private:
 	int levelWidth;
 	int levelHeight;
 	std::string levelTiles;
-	int tileWidth = 8;
-	int tileHeight = 8;
+	int tileWidth = 16;
+	int tileHeight = 16;
+	int cameraX = 8;
+	int camPadding = 8;
+	int FoVwidth;
 
 public:
 	Pico()
@@ -49,8 +56,8 @@ public:
 	bool OnUserCreate() override
 	{
 		levelWidth = 32;
-		levelHeight = 32;
-		levelTiles += "################################";
+		levelHeight = 15;
+		levelTiles += "################################";/*
 		levelTiles += "#..............................#";
 		levelTiles += "#..............................#";
 		levelTiles += "#..............................#";
@@ -66,8 +73,8 @@ public:
 		levelTiles += "#..............................#";
 		levelTiles += "#..............................#";
 		levelTiles += "#..............................#";
-		levelTiles += "#........#.....................#";
-		levelTiles += "#........#.....................#";
+		levelTiles += "#........#.....................#"; 
+		levelTiles += "#........#.....................#";*/
 		levelTiles += "#........#.#...................#";
 		levelTiles += "#.########.##..................#";
 		levelTiles += "#........#.###.................#";
@@ -83,8 +90,9 @@ public:
 		levelTiles += "#..............................#";
 		levelTiles += "################################";
 
-		brick = new olc::Sprite(16, 16);
-		player = new olc::Sprite(8, 8);
+		//brick = new olc::Sprite(16, 16);
+		playerPos.sprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("pikman_right_1.png")));
+		playerPos.sprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("pikman_right_2.png")));
 
 		for(int x = 0; x < ScreenWidth(); x++)
 		{
@@ -94,7 +102,12 @@ public:
 			}
 		}
 
-		SetPixelMode(olc::Pixel::NORMAL);
+		SetPixelMode(olc::Pixel::ALPHA);
+
+		//camPadding = 8 * tileWidth;
+		FoVwidth = ScreenWidth() / tileWidth;
+		//cameraX = playerPos.x < camPadding ? camPadding : playerPos.x;
+		//cameraX = playerPos.x > levelWidth * tileWidth - camPadding ? levelWidth * tileWidth - camPadding : playerPos.x; 
 
 		return true;
 	}
@@ -113,7 +126,13 @@ public:
 		if(GetKey(olc::Key::RIGHT).bHeld) playerPos.velX += 15.0f * tileWidth * fElapsedTime * 1.5f;
 		if(GetKey(olc::Key::LEFT).bHeld) playerPos.velX += -15.0f * tileWidth * fElapsedTime * 1.5f;
 
-
+		playerPos.spriteFrameCounter += fElapsedTime;
+		if(playerPos.spriteFrameCounter > 0.25f)
+		{
+			playerPos.spriteNo++;
+			playerPos.spriteNo %= 2;
+			playerPos.spriteFrameCounter -= 0.25f; 
+		}
 		
 
 		//physics
@@ -161,7 +180,7 @@ public:
 			int yTileOffset = (int)(potNewY + playerPos.h - 1) / tileHeight;
 			if(levelTiles[yTile * levelWidth + xTileOffset] == '#' || levelTiles[yTileOffset * levelWidth + xTileOffset] == '#')
 			{
-				potNewX = (int)potNewX;
+				potNewX = ((int)potNewX / tileWidth) * tileWidth;
 				playerPos.velX = 0.0f;
 			}
 		}
@@ -188,7 +207,7 @@ public:
 			int yTileOffset = (int)(potNewY + playerPos.h) / tileHeight;
 			if(levelTiles[yTileOffset * levelWidth + xTile] == '#' || levelTiles[yTileOffset * levelWidth + xTileOffset] == '#')
 			{
-				potNewY = (int)potNewY;
+				potNewY = ((int)potNewY / tileHeight) * tileHeight;
 				playerPos.velY = 0.0f;
 				playerPos.onGround = true;
 			}
@@ -210,12 +229,48 @@ public:
 		playerPos.x = (snapX * tileWidth) - (playerPos.w / 2);
 		playerPos.y = (snapY * tileHeight) - (playerPos.h / 2);
 		*/
+	
+		//cameraX = playerPos.x < (FoVwidth / 2) * tileWidth ? FoVwidth / 2 : (int)playerPos.x / tileWidth;
+		//cameraX = playerPos.x + tileWidth > (levelWidth - FoVwidth / 2) * tileWidth ? levelWidth - FoVwidth / 2 : (int)playerPos.x / tileWidth;
+		cameraX = playerPos.x / tileWidth;
+		//int fovOffsetX = FoVwidth / 2;
+
+		//if(playerPos.velX > 0) cameraX += 1;
+
+		int xOffsetCam = cameraX - FoVwidth / 2;
+		int tileOffsetX = ((int)playerPos.x % tileWidth);
+
+		if(xOffsetCam < 0)
+		{ 
+			xOffsetCam = 0;
+			tileOffsetX = 0;
+		}
+		if(xOffsetCam >= levelWidth - FoVwidth)
+		{
+			xOffsetCam = levelWidth - FoVwidth;
+			tileOffsetX = 0;
+		}
 		
 
 
-
-
 		//Draw Screen
+		int xOffset = 0;
+		for(int x = -1; x < FoVwidth; x++)
+		{
+			for(int y = 0; y < levelHeight; y++)
+			{
+				olc::Pixel p = levelTiles[y * levelWidth + x + xOffsetCam] == '#' ? olc::DARK_RED : olc::CYAN;
+				FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, p);
+				//if(xOffsetCam != 0)	FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, p);
+				//else FillRect(x * tileWidth, y * tileHeight, tileWidth, tileHeight, p);
+			}
+			xOffset++;
+		}
+
+
+
+
+		/*
 		for(int x = 0; x < levelWidth; x++)
 		{
 			for(int y = 0; y < levelHeight; y++)
@@ -224,8 +279,9 @@ public:
 				FillRect(x * tileWidth, y * tileHeight, tileWidth, tileHeight, p);
 			}
 		}
+		*/
 
-		DrawSprite(playerPos.x, playerPos.y, player);
+		DrawSprite(playerPos.x - (tileWidth * xOffsetCam) - tileOffsetX, (playerPos.y), playerPos.sprites[playerPos.spriteNo].get());
 
 		return true;
 	}
@@ -234,7 +290,7 @@ public:
 	std::vector<olc::Sprite*> tiles;
 	olc::Sprite* brick;
 	olc::Sprite* player;
-	SpritePosition playerPos {(float)tileWidth + 2, 100.0f, 8.0f, 8.0f, 0.0f, 0.0f, 0.0f, false};
+	SpritePosition playerPos {(float)tileWidth + 2, 100.0f, 16.0f, 16.0f, 0.0f, 0.0f, 0.0f, false};
 };
 
 
@@ -242,7 +298,7 @@ public:
 int main()
 {
 	Pico demo;
-	if(demo.Construct(256, 256, 4, 4)) demo.Start();
+	if(demo.Construct(256, 240, 4, 4)) demo.Start();
 
 
 	return 0;

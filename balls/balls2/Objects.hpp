@@ -253,6 +253,8 @@ public:
 	std::vector<fPair> sortedByFirst_;
 	std::vector<fPair> sortedBySecond_;
 	float lastPx_, lastPy_;
+	float halfLength_;
+	float halfHeight_;
 
 	Box() : Object() {};
 
@@ -260,20 +262,19 @@ public:
 	{
 		shape_ = BOX;
 
-		
-
 		objectModel_.push_back({x1, y1});
 		objectModel_.push_back({x2, y1});
 		objectModel_.push_back({x1, y2});
 		objectModel_.push_back({x2, y2});
 
 		rearrangeCoordinates();
+
 		for(int i = 0; i < objectModel_.size(); i++) std::cout << objectModel_[i].first << " - " << objectModel_[i].second << std::endl;
 
-		px_ = ((objectModel_[NE].first - objectModel_[NW].first) / 2) + objectModel_[NW].first;
-		py_ = ((objectModel_[SW].second - objectModel_[NW].second) / 2) + objectModel_[NW].second;
+
 		
-		radius_ = sqrtf((px_ - objectModel_[NW].first) * (px_ - objectModel_[NW].first) + (py_ - objectModel_[NW].second) * (py_ - objectModel_[NW].second));
+		
+		radius_ = sqrtf(objectModel_[NE].first * objectModel_[NE].first + objectModel_[NE].second * objectModel_[NE].second);
 		vx_ = cosf(rotation_);
 		vy_ = sinf(rotation_);
 
@@ -293,6 +294,17 @@ public:
 		objectModel_[NE] = {sortedByFirst_[2].first, sortedBySecond_[1].second};
 		objectModel_[SW] = {sortedByFirst_[1].first, sortedBySecond_[2].second};
 		objectModel_[SE] = {sortedByFirst_[3].first, sortedBySecond_[3].second};
+
+		px_ = ((objectModel_[NE].first - objectModel_[NW].first) / 2) + objectModel_[NW].first;
+		py_ = ((objectModel_[SW].second - objectModel_[NW].second) / 2) + objectModel_[NW].second;
+
+		halfLength_ = (objectModel_[NE].first - objectModel_[NW].first) / 2;
+		halfHeight_ = (objectModel_[SW].second - objectModel_[NW].second) / 2;
+
+		objectModel_[NW] = {-halfLength_, halfHeight_};
+		objectModel_[NE] = {halfLength_, halfHeight_};
+		objectModel_[SW] = {-halfLength_, -halfHeight_};
+		objectModel_[SE] = {halfLength_, -halfHeight_};
 	}
 
 	virtual void resizeObject(int corner, iPair mouse)
@@ -305,32 +317,32 @@ public:
 			switch(corner)
 			{
 				case NW :
-				objectModel_[NW] = castedMouse;
-				objectModel_[NE].second = castedMouse.second;
-				objectModel_[SW].first = castedMouse.first;
+				objectModel_[NW] = {castedMouse.first - objectModel_[NW].first, castedMouse.second - objectModel_[NW].second};
+				objectModel_[NE].second = castedMouse.second - objectModel_[NE].second;
+				objectModel_[SW].first = castedMouse.first - objectModel_[SW].first;
 				break;
 
 				case NE :
-				objectModel_[NE] = castedMouse;
-				objectModel_[NW].second = castedMouse.second;
-				objectModel_[SE].first = castedMouse.first;
+				objectModel_[NE] = {castedMouse.first - objectModel_[NE].first, castedMouse.second - objectModel_[NE].second};
+				objectModel_[NW].second = castedMouse.second - objectModel_[NW].second;
+				objectModel_[SE].first = castedMouse.first - objectModel_[SE].first;
 				break;
 
 				case SW :
-				objectModel_[SW] = castedMouse;
-				objectModel_[SE].second = castedMouse.second;
-				objectModel_[NW].first = castedMouse.first;
+				objectModel_[SW] = {castedMouse.first - objectModel_[SW].first, castedMouse.second - objectModel_[SW].second};
+				objectModel_[SE].second = castedMouse.second - objectModel_[SE].second;
+				objectModel_[NW].first = castedMouse.first - objectModel_[NW].first;
 				break;
 
 				case SE :
-				objectModel_[SE] = castedMouse;
-				objectModel_[SW].second = castedMouse.second;
-				objectModel_[NE].first = castedMouse.first;
+				objectModel_[SE] = {castedMouse.first - objectModel_[SE].first, castedMouse.second - objectModel_[SE].second};
+				objectModel_[SW].second = castedMouse.second - objectModel_[SW].second;
+				objectModel_[NE].first = castedMouse.first - objectModel_[NE].first;
 				break;
 			}
 
-			rearrangeCoordinates();		
-			setCenterAfterResize();
+			//rearrangeCoordinates();		
+			//setCenterAfterResize();
 		}
 	}
 
@@ -347,8 +359,8 @@ public:
 		float offsetX = px_ - lastPx_;
 		float offsetY = py_ - lastPy_;
 
-		std::vector<fPair> t = translatePolygon(objectModel_, offsetX, offsetY, rotation_, 1.0f);
-		objectModel_ = t;
+		std::vector<fPair> t = translatePolygon(objectModel_, px_, py_, rotation_, 1.0f);
+		//objectModel_ = t;
 
 		LlobstidrawLine(engine, t[NW].first, t[NW].second, t[NE].first, t[NE].second, color_);
 		LlobstidrawLine(engine, t[NE].first, t[NE].second, t[SE].first, t[SE].second, color_);
@@ -362,13 +374,15 @@ public:
 
 	virtual bool isPointInsideObject(int* corner, fPair mouse)
 	{
-		float x1 = objectModel_[NW].first;
-		float y1 = objectModel_[NW].second;
-		float x2 = objectModel_[SE].first;
-		float y2 = objectModel_[SE].second;
+		float Length = 2 * halfLength_;
+		float Height = 2 * halfHeight_;
 
-		float Length = x2 - x1;
-		float Height = y2 - y1;
+		float x1 = objectModel_[NW].first + px_;
+		float y1 = objectModel_[NW].second + py_;
+		float x2 = objectModel_[SE].first + px_;
+		float y2 = objectModel_[SE].second + py_;
+
+		
 		
 		if((mouse.first > x1) && (mouse.first < ((Length / 2) + x1)))  
 		{

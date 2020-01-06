@@ -195,13 +195,13 @@ public:
 					srand(time(0));
 					float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
-					b->rotation_ = r * fElapsedTime * 0.1f;
+					b->rotation_ += (r+0.6) * fElapsedTime * 0.1f;
 
 					b->vx_ = cosf(b->rotation_);
 					b->vy_ = sinf(b->rotation_);
 
-					//b->px_ += b->vx_ * b->velocity_ * fElapsedTime * (r + 0.6f);
-					//b->py_ += b->vy_ * b->velocity_ * fElapsedTime * (r + 0.6f);
+					b->px_ += b->vx_ * b->velocity_ * fElapsedTime * (r + 0.2f);
+					b->py_ += b->vy_ * b->velocity_ * fElapsedTime * (r + 0.2f);
 
 
 					b->py_ = b->py_ > ScreenHeight() ? 0.0f : b->py_;
