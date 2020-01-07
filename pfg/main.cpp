@@ -47,6 +47,8 @@ private:
 	int camPadding = 8;
 	int FoVwidth;
 
+	std::vector<boost::shared_ptr<olc::Sprite>> levelSprites;
+
 public:
 	Pico()
 	{
@@ -90,7 +92,7 @@ public:
 		levelTiles += "#..............................#";
 		levelTiles += "################################";
 
-		//brick = new olc::Sprite(16, 16);
+		levelSprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("brick_tile.png")));
 		playerPos.sprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("pikman_right_1.png")));
 		playerPos.sprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("pikman_right_2.png")));
 
@@ -127,11 +129,11 @@ public:
 		if(GetKey(olc::Key::LEFT).bHeld) playerPos.velX += -15.0f * tileWidth * fElapsedTime * 1.5f;
 
 		playerPos.spriteFrameCounter += fElapsedTime;
-		if(playerPos.spriteFrameCounter > 0.25f)
+		if(playerPos.spriteFrameCounter > 0.125f)
 		{
 			playerPos.spriteNo++;
 			playerPos.spriteNo %= 2;
-			playerPos.spriteFrameCounter -= 0.25f; 
+			playerPos.spriteFrameCounter -= 0.125f; 
 		}
 		
 
@@ -255,14 +257,14 @@ public:
 
 		//Draw Screen
 		int xOffset = 0;
-		for(int x = -1; x < FoVwidth; x++)
+		for(int x = -1; x <= FoVwidth; x++)
 		{
 			for(int y = 0; y < levelHeight; y++)
 			{
-				olc::Pixel p = levelTiles[y * levelWidth + x + xOffsetCam] == '#' ? olc::DARK_RED : olc::CYAN;
-				FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, p);
-				//if(xOffsetCam != 0)	FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, p);
-				//else FillRect(x * tileWidth, y * tileHeight, tileWidth, tileHeight, p);
+				int levelSpriteNo = levelTiles[y * levelWidth + x + xOffsetCam] == '#' ? 0 : 1;
+				//olc::Pixel p = levelTiles[y * levelWidth + x + xOffsetCam] == '#' ? olc::DARK_RED : olc::CYAN;
+				if(levelSpriteNo == 1) FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
+				else if(levelSpriteNo == 0) DrawSprite(x * tileWidth - tileOffsetX, y * tileHeight, levelSprites[0].get());
 			}
 			xOffset++;
 		}
