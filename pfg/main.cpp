@@ -46,8 +46,9 @@ private:
 	int cameraX = 8;
 	int camPadding = 8;
 	int FoVwidth;
-
+	std::vector<boost::shared_ptr<olc::Sprite>> enemys;
 	std::vector<boost::shared_ptr<olc::Sprite>> levelSprites;
+	bool gameOver = false;
 
 public:
 	Pico()
@@ -72,10 +73,12 @@ public:
 		levelTiles += "#........#####.####............................................#";
 		levelTiles += "#......##....#...........##..................................#.#";
 		levelTiles += "#............######............................................#";
-		levelTiles += "#..............................................................#";
+		levelTiles += "#.....................e........................................#";
 		levelTiles += "################################################################";
 
 		levelSprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("brick_tile.png")));
+
+		enemys.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("enemy1.png")));
 		playerPos.sprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("pikman_right_1.png")));
 		playerPos.sprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("pikman_right_2.png")));
 
@@ -156,6 +159,13 @@ public:
 				potNewX = xTile == 0 ? tileWidth : xTile * tileWidth + ((int)potNewX % (xTile * tileWidth)) + 1;
 				playerPos.velX = 0.0f;
 			}
+
+			else if(levelTiles[yTile * levelWidth + xTile] == 'e' || levelTiles[yTileOffset * levelWidth + xTile] == 'e')
+			{
+				potNewX = xTile == 0 ? tileWidth : xTile * tileWidth + ((int)potNewX % (xTile * tileWidth)) + 1;
+				playerPos.velX = 0.0f;
+				gameOver = true;
+			}
 		}
 		// Right
 		else
@@ -167,6 +177,13 @@ public:
 			{
 				potNewX = ((int)potNewX / tileWidth) * tileWidth;
 				playerPos.velX = 0.0f;
+			}
+
+			else if(levelTiles[yTile * levelWidth + xTileOffset] == 'e' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'e')
+			{
+				potNewX = ((int)potNewX / tileWidth) * tileWidth;
+				playerPos.velX = 0.0f;
+				gameOver = true;
 			}
 		}
 
@@ -183,6 +200,13 @@ public:
 				potNewY = (int)(yTile * tileHeight + tileHeight);
 				playerPos.velY = 0.0f;
 			}
+
+			else if(levelTiles[yTile * levelWidth + xTile] == 'e' || levelTiles[yTile * levelWidth + xTileOffset] == 'e')
+			{
+				potNewY = (int)(yTile * tileHeight + tileHeight);
+				playerPos.velY = 0.0f;
+				gameOver = true;
+			}
 		}
 		// Down
 		else
@@ -196,31 +220,20 @@ public:
 				playerPos.velY = 0.0f;
 				playerPos.onGround = true;
 			}
+
+			else if(levelTiles[yTileOffset * levelWidth + xTile] == 'e' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'e')
+			{
+				potNewY = ((int)potNewY / tileHeight) * tileHeight;
+				playerPos.velY = 0.0f;
+				gameOver = true;
+			}
 		}
 
 		playerPos.x = potNewX;
 		playerPos.y = potNewY;
 		
 
-		//Snap Sprite
-
-		/*
-		float tileX = GetMouseX() / tileWidth;
-		float tileY = GetMouseY() / tileHeight;
-
-		int snapX = (tileX - (int)tileX) < 0.5 ? (int)tileX : (int)tileX + 1; 
-		int snapY = (tileY - (int)tileY) < 0.5 ? (int)tileY : (int)tileY + 1; 
-
-		playerPos.x = (snapX * tileWidth) - (playerPos.w / 2);
-		playerPos.y = (snapY * tileHeight) - (playerPos.h / 2);
-		*/
-	
-		//cameraX = playerPos.x < (FoVwidth / 2) * tileWidth ? FoVwidth / 2 : (int)playerPos.x / tileWidth;
-		//cameraX = playerPos.x + tileWidth > (levelWidth - FoVwidth / 2) * tileWidth ? levelWidth - FoVwidth / 2 : (int)playerPos.x / tileWidth;
 		cameraX = playerPos.x / tileWidth;
-		//int fovOffsetX = FoVwidth / 2;
-
-		//if(playerPos.velX > 0) cameraX += 1;
 
 		int xOffsetCam = cameraX - FoVwidth / 2;
 		int tileOffsetX = ((int)playerPos.x % tileWidth);
@@ -239,20 +252,36 @@ public:
 
 
 		//Draw Screen
-		int xOffset = 0;
 		for(int x = -1; x <= FoVwidth; x++)
 		{
 			for(int y = 0; y < levelHeight; y++)
 			{
-				int levelSpriteNo = levelTiles[y * levelWidth + x + xOffsetCam] == '#' ? 0 : 1;
-				//olc::Pixel p = levelTiles[y * levelWidth + x + xOffsetCam] == '#' ? olc::DARK_RED : olc::CYAN;
-				if(levelSpriteNo == 1) FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
-				else if(levelSpriteNo == 0) DrawSprite(x * tileWidth - tileOffsetX, y * tileHeight, levelSprites[0].get());
+				switch(levelTiles[y * levelWidth + x + xOffsetCam])
+				{
+					case '#' :
+						DrawSprite(x * tileWidth - tileOffsetX, y * tileHeight, levelSprites[0].get());
+						break;
+
+					case '.' :
+						FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
+						break;
+
+					case 'e' :
+						FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
+						DrawSprite(x * tileWidth - tileOffsetX - 1, y * tileHeight, enemys[0].get());
+						break;
+
+					default :
+						break;
+				}
 			}
-			xOffset++;
 		}
 
-
+		if(gameOver)
+		{
+			DrawString((ScreenWidth() / 2) - 48, 88, "Game Over!", olc::BLUE, 2);
+			//DrawString(int32_t x, int32_t y, std::string sText, olc::Pixel col = olc::WHITE, uint32_t scale = 1)
+		}
 
 
 		/*
