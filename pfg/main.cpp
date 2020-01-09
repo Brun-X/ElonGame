@@ -74,9 +74,10 @@ public:
 		levelTiles += "#......##....#...........##..................................#.#";
 		levelTiles += "#............######............................................#";
 		levelTiles += "#.....................e........................................#";
-		levelTiles += "################################################################";
+		levelTiles += "##########aa############a#aaaa#####aaaaa########aaaaaaaaaaaa####";
 
 		levelSprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("brick_tile.png")));
+		levelSprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("acid_tile.png")));
 
 		enemys.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("enemy1.png")));
 		playerPos.sprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("pikman_right_1.png")));
@@ -160,7 +161,7 @@ public:
 				playerPos.velX = 0.0f;
 			}
 
-			else if(levelTiles[yTile * levelWidth + xTile] == 'e' || levelTiles[yTileOffset * levelWidth + xTile] == 'e')
+			else if(levelTiles[yTile * levelWidth + xTile] == 'e' || levelTiles[yTileOffset * levelWidth + xTile] == 'e' || levelTiles[yTile * levelWidth + xTile] == 'a' || levelTiles[yTileOffset * levelWidth + xTile] == 'a')
 			{
 				potNewX = xTile == 0 ? tileWidth : xTile * tileWidth + ((int)potNewX % (xTile * tileWidth)) + 1;
 				playerPos.velX = 0.0f;
@@ -179,7 +180,7 @@ public:
 				playerPos.velX = 0.0f;
 			}
 
-			else if(levelTiles[yTile * levelWidth + xTileOffset] == 'e' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'e')
+			else if(levelTiles[yTile * levelWidth + xTileOffset] == 'e' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'e' || levelTiles[yTile * levelWidth + xTileOffset] == 'a' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'a')
 			{
 				potNewX = ((int)potNewX / tileWidth) * tileWidth;
 				playerPos.velX = 0.0f;
@@ -201,7 +202,7 @@ public:
 				playerPos.velY = 0.0f;
 			}
 
-			else if(levelTiles[yTile * levelWidth + xTile] == 'e' || levelTiles[yTile * levelWidth + xTileOffset] == 'e')
+			else if(levelTiles[yTile * levelWidth + xTile] == 'e' || levelTiles[yTile * levelWidth + xTileOffset] == 'e' || levelTiles[yTile * levelWidth + xTile] == 'a' || levelTiles[yTile * levelWidth + xTileOffset] == 'a')
 			{
 				potNewY = (int)(yTile * tileHeight + tileHeight);
 				playerPos.velY = 0.0f;
@@ -221,7 +222,7 @@ public:
 				playerPos.onGround = true;
 			}
 
-			else if(levelTiles[yTileOffset * levelWidth + xTile] == 'e' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'e')
+			else if(levelTiles[yTileOffset * levelWidth + xTile] == 'e' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'e' || levelTiles[yTileOffset * levelWidth + xTile] == 'e' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'e')
 			{
 				potNewY = ((int)potNewY / tileHeight) * tileHeight;
 				playerPos.velY = 0.0f;
@@ -260,6 +261,12 @@ public:
 				{
 					case '#' :
 						DrawSprite(x * tileWidth - tileOffsetX, y * tileHeight, levelSprites[0].get());
+						break;
+
+					case 'a' :
+						FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
+						DrawSprite(x * tileWidth - tileOffsetX, y * tileHeight, levelSprites[1].get());
+
 						break;
 
 					case '.' :
