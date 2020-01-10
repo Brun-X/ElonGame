@@ -15,6 +15,7 @@ IMPLEMNTED WITH THE OLCPIXELGAMEENGINE FROM:
 
 #include "olcPixelGameEngine.h"
 #include <boost/shared_ptr.hpp>
+#include <string>
 
 
 
@@ -46,8 +47,10 @@ private:
 	int cameraX = 8;
 	int camPadding = 8;
 	int FoVwidth;
-	std::vector<boost::shared_ptr<olc::Sprite>> enemys;
+	std::vector<boost::shared_ptr<olc::Sprite>> enemySprites;
 	std::vector<boost::shared_ptr<olc::Sprite>> levelSprites;
+	std::vector<boost::shared_ptr<SpritePosition>> enemyPos;
+	int noEnemys = 0;
 	bool gameOver = false;
 
 public:
@@ -79,9 +82,26 @@ public:
 		levelSprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("brick_tile.png")));
 		levelSprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("acid_tile.png")));
 
-		enemys.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("enemy1.png")));
+		enemySprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("enemy1.png")));
 		playerPos.sprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("pikman_right_1.png")));
 		playerPos.sprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("pikman_right_2.png")));
+
+		size_t enemyIdx = 0;
+		size_t eoffset = 0;
+		do
+		{
+			enemyIdx = levelTiles.find('e', eoffset);
+			if(enemyIdx != std::string::npos) 
+			{
+				enemyPos.push_back(boost::shared_ptr<SpritePosition>(new SpritePosition{(float)((enemyIdx % levelWidth) * tileWidth), (float)((enemyIdx / levelWidth) * tileHeight), 16, 16}));
+				eoffset = enemyIdx + 1;
+			}
+		}
+		while(enemyIdx != std::string::npos);
+
+		std::cout << enemyPos[0]->x << ", " << enemyPos[0]->y << std::endl;
+
+		noEnemys = enemyPos.size();
 
 		for(int x = 0; x < ScreenWidth(); x++)
 		{
@@ -234,6 +254,19 @@ public:
 		playerPos.y = potNewY;
 		
 
+		//Enemy movement
+		for(int i = 0; i < noEnemys; i++)
+		{
+			if(enemyPos[i]->spriteFrameCounter < 32) enemyPos[i]->velX = -5;
+			else enemyPos[i]->velX = 5;
+			enemyPos[i]->spriteFrameCounter++;
+			enemyPos[i]->spriteFrameCounter = (int)enemyPos[i]->spriteFrameCounter % 64;
+			enemyPos[i]->x += enemyPos[i]->velX * fElapsedTime;
+		}
+
+		std::cout << enemyPos[0]->x << ", " << enemyPos[0]->y << std::endl;
+
+		//Panning
 		cameraX = playerPos.x / tileWidth;
 
 		int xOffsetCam = cameraX - FoVwidth / 2;
@@ -273,11 +306,12 @@ public:
 						FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
 						break;
 
+/*
 					case 'e' :
 						FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
-						DrawSprite(x * tileWidth - tileOffsetX - 1, y * tileHeight, enemys[0].get());
+						DrawSprite(x * tileWidth - tileOffsetX - 1, y * tileHeight, enemySprites[0].get());
 						break;
-
+*/
 					default :
 						break;
 				}
@@ -302,6 +336,16 @@ public:
 		}
 		*/
 
+
+
+		for(int i = 0; i < noEnemys; i++)
+		{
+			if(enemyPos[i]->x > xOffsetCam * tileWidth && enemyPos[i]->x < (xOffsetCam + FoVwidth) * tileWidth)
+			{
+				FillRect(enemyPos[i]->x - (tileWidth * xOffsetCam) - tileOffsetX, enemyPos[i]->y * tileHeight, tileWidth, tileHeight, olc::CYAN);
+				DrawSprite(enemyPos[i]->x - (tileWidth * xOffsetCam) - tileOffsetX, enemyPos[i]->y * tileHeight, enemySprites[0].get());
+			}
+		}
 		DrawSprite(playerPos.x - (tileWidth * xOffsetCam) - tileOffsetX, (playerPos.y), playerPos.sprites[playerPos.spriteNo].get());
 
 		return true;
