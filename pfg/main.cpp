@@ -99,7 +99,7 @@ public:
 		}
 		while(enemyIdx != std::string::npos);
 
-		std::cout << enemyPos[0]->x << ", " << enemyPos[0]->y << std::endl;
+		//std::cout << enemyPos[0]->x << ", " << enemyPos[0]->y << std::endl;
 
 		noEnemys = enemyPos.size();
 
@@ -124,50 +124,48 @@ public:
 	bool OnUserUpdate(float fElapsedTime) override
 	{
 		//User input
-
-		if(GetKey(olc::Key::SPACE).bPressed) 
+		static float potNewX = playerPos.x, potNewY = playerPos.y;
+		if(!gameOver)
 		{
-			if(playerPos.velY == 0.0f && playerPos.onGround) playerPos.velY = -12.0f * tileHeight;
-		}
-		//if(GetKey(olc::Key::UP).bHeld) playerPos.y -= 2;
-		//if(GetKey(olc::Key::DOWN).bHeld) playerPos.y += 2;
 
-		if(GetKey(olc::Key::RIGHT).bHeld) playerPos.velX += 15.0f * tileWidth * fElapsedTime * 1.5f;
-		if(GetKey(olc::Key::LEFT).bHeld) playerPos.velX += -15.0f * tileWidth * fElapsedTime * 1.5f;
+			if(GetKey(olc::Key::SPACE).bPressed) 
+			{
+				if(playerPos.velY == 0.0f && playerPos.onGround) playerPos.velY = -12.0f * tileHeight;
+			}
+			if(GetKey(olc::Key::RIGHT).bHeld) playerPos.velX += 15.0f * tileWidth * fElapsedTime * 1.5f;
+			if(GetKey(olc::Key::LEFT).bHeld) playerPos.velX += -15.0f * tileWidth * fElapsedTime * 1.5f;
 
-		playerPos.spriteFrameCounter += fElapsedTime;
-		if(playerPos.spriteFrameCounter > 0.125f)
-		{
-			playerPos.spriteNo++;
-			playerPos.spriteNo %= 2;
-			playerPos.spriteFrameCounter -= 0.125f; 
-		}
+			playerPos.spriteFrameCounter += fElapsedTime;
+			if(playerPos.spriteFrameCounter > 0.125f)
+			{
+				playerPos.spriteNo++;
+				playerPos.spriteNo %= 2;
+				playerPos.spriteFrameCounter -= 0.125f; 
+			}
+			//physics
+
+			//gravity
+			playerPos.velY += 20.0f * tileHeight * (fElapsedTime * 1.5f);
+
+
+			//drag
+			if(playerPos.onGround)
+			{
+				playerPos.velX += -3.0f * playerPos.velX * fElapsedTime * 1.5f;
+				if(fabs(playerPos.velX) < 0.01f) playerPos.velX = 0.0f;
+			}
+
+			//clamping velocity
+			playerPos.velX = playerPos.velX < -8.0f * tileWidth ? -8.0f * tileWidth : playerPos.velX;
+			playerPos.velX = playerPos.velX > 8.0f * tileWidth ? 8.0f * tileWidth : playerPos.velX;
+
+			playerPos.velY = playerPos.velY < -20.0f * tileHeight ? -20.0f * tileHeight : playerPos.velY;
+			playerPos.velY = playerPos.velY > 10.0f * tileHeight ? 10.0f * tileHeight : playerPos.velY;
+
+
+			potNewX = playerPos.x + playerPos.velX * fElapsedTime * 1.5f;
+			potNewY = playerPos.y + playerPos.velY * fElapsedTime * 1.5f;
 		
-
-		//physics
-
-		//gravity
-		playerPos.velY += 20.0f * tileHeight * (fElapsedTime * 1.5f);
-
-
-		//drag
-		if(playerPos.onGround)
-		{
-			playerPos.velX += -3.0f * playerPos.velX * fElapsedTime * 1.5f;
-			if(fabs(playerPos.velX) < 0.01f) playerPos.velX = 0.0f;
-		}
-		
-
-		//clamping velocity
-		playerPos.velX = playerPos.velX < -8.0f * tileWidth ? -8.0f * tileWidth : playerPos.velX;
-		playerPos.velX = playerPos.velX > 8.0f * tileWidth ? 8.0f * tileWidth : playerPos.velX;
-
-		playerPos.velY = playerPos.velY < -20.0f * tileHeight ? -20.0f * tileHeight : playerPos.velY;
-		playerPos.velY = playerPos.velY > 10.0f * tileHeight ? 10.0f * tileHeight : playerPos.velY;
-
-
-		float potNewX = playerPos.x + playerPos.velX * fElapsedTime * 1.5f;
-		float potNewY = playerPos.y + playerPos.velY * fElapsedTime * 1.5f;
 
 		// Left
 		if(playerPos.velX <= 0)
@@ -181,10 +179,11 @@ public:
 				playerPos.velX = 0.0f;
 			}
 
-			else if(levelTiles[yTile * levelWidth + xTile] == 'e' || levelTiles[yTileOffset * levelWidth + xTile] == 'e' || levelTiles[yTile * levelWidth + xTile] == 'a' || levelTiles[yTileOffset * levelWidth + xTile] == 'a')
+			else if(levelTiles[yTile * levelWidth + xTile] == 'a' || levelTiles[yTileOffset * levelWidth + xTile] == 'a')
 			{
-				potNewX = xTile == 0 ? tileWidth : xTile * tileWidth + ((int)potNewX % (xTile * tileWidth)) + 1;
+				//potNewX = xTile == 0 ? tileWidth : xTile * tileWidth + ((int)potNewX % (xTile * tileWidth)) + 1;
 				playerPos.velX = 0.0f;
+				playerPos.velY = 0.0f;
 				gameOver = true;
 			}
 		}
@@ -200,10 +199,11 @@ public:
 				playerPos.velX = 0.0f;
 			}
 
-			else if(levelTiles[yTile * levelWidth + xTileOffset] == 'e' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'e' || levelTiles[yTile * levelWidth + xTileOffset] == 'a' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'a')
+			else if(levelTiles[yTile * levelWidth + xTileOffset] == 'a' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'a')
 			{
-				potNewX = ((int)potNewX / tileWidth) * tileWidth;
+				//potNewX = ((int)potNewX / tileWidth) * tileWidth;
 				playerPos.velX = 0.0f;
+				playerPos.velY = 0.0f;
 				gameOver = true;
 			}
 		}
@@ -222,9 +222,10 @@ public:
 				playerPos.velY = 0.0f;
 			}
 
-			else if(levelTiles[yTile * levelWidth + xTile] == 'e' || levelTiles[yTile * levelWidth + xTileOffset] == 'e' || levelTiles[yTile * levelWidth + xTile] == 'a' || levelTiles[yTile * levelWidth + xTileOffset] == 'a')
+			else if(levelTiles[yTile * levelWidth + xTile] == 'a' || levelTiles[yTile * levelWidth + xTileOffset] == 'a')
 			{
-				potNewY = (int)(yTile * tileHeight + tileHeight);
+				//potNewY = (int)(yTile * tileHeight + tileHeight);
+				playerPos.velX = 0.0f;
 				playerPos.velY = 0.0f;
 				gameOver = true;
 			}
@@ -242,29 +243,51 @@ public:
 				playerPos.onGround = true;
 			}
 
-			else if(levelTiles[yTileOffset * levelWidth + xTile] == 'e' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'e' || levelTiles[yTileOffset * levelWidth + xTile] == 'e' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'e')
+			else if(levelTiles[yTileOffset * levelWidth + xTile] == 'a' || levelTiles[yTileOffset * levelWidth + xTileOffset] == 'a')
 			{
-				potNewY = ((int)potNewY / tileHeight) * tileHeight;
+				potNewY = ((int)potNewY / tileHeight) * tileHeight + (tileHeight / 20.0f) * playerPos.velY;
 				playerPos.velY = 0.0f;
+				playerPos.velX = 0.0f;
 				gameOver = true;
+			}
+			for(int i = 0; i < noEnemys; i++)
+			{
+				if((potNewX + tileWidth) > enemyPos[i]->x && potNewX < (enemyPos[i]->x + tileWidth))
+				{
+					if((potNewY + tileHeight) > enemyPos[i]->y && potNewY < (enemyPos[i]->y + tileHeight))
+					{
+						playerPos.velY = 0.0f;
+						playerPos.velX = 0.0f;
+						gameOver = true;
+					}
+				}
 			}
 		}
 
 		playerPos.x = potNewX;
 		playerPos.y = potNewY;
+	}
+
+
+		if((playerPos.y + tileHeight) > ScreenHeight())
+		{
+			playerPos.y = ScreenHeight() - tileHeight;
+			playerPos.velX = 0.0f;
+			playerPos.velY = 0.0f;
+		}
 		
 
 		//Enemy movement
 		for(int i = 0; i < noEnemys; i++)
 		{
-			if(enemyPos[i]->spriteFrameCounter < 32) enemyPos[i]->velX = -5;
-			else enemyPos[i]->velX = 5;
-			enemyPos[i]->spriteFrameCounter++;
-			enemyPos[i]->spriteFrameCounter = (int)enemyPos[i]->spriteFrameCounter % 64;
+			if(enemyPos[i]->spriteFrameCounter < 3.0f) enemyPos[i]->velX = -10.0f;
+			else enemyPos[i]->velX = 10.0f;
+			enemyPos[i]->spriteFrameCounter += fElapsedTime;
+			enemyPos[i]->spriteFrameCounter = enemyPos[i]->spriteFrameCounter > 6.0f ? enemyPos[i]->spriteFrameCounter - 6.0f : enemyPos[i]->spriteFrameCounter;
 			enemyPos[i]->x += enemyPos[i]->velX * fElapsedTime;
 		}
 
-		std::cout << enemyPos[0]->x << ", " << enemyPos[0]->y << std::endl;
+		//std::cout << playerPos.x << ", " << playerPos.y << std::endl;
 
 		//Panning
 		cameraX = playerPos.x / tileWidth;
@@ -340,10 +363,11 @@ public:
 
 		for(int i = 0; i < noEnemys; i++)
 		{
-			if(enemyPos[i]->x > xOffsetCam * tileWidth && enemyPos[i]->x < (xOffsetCam + FoVwidth) * tileWidth)
+			if((enemyPos[i]->x > (xOffsetCam * tileWidth)) && (enemyPos[i]->x < ((xOffsetCam + FoVwidth) * tileWidth)))
 			{
-				FillRect(enemyPos[i]->x - (tileWidth * xOffsetCam) - tileOffsetX, enemyPos[i]->y * tileHeight, tileWidth, tileHeight, olc::CYAN);
-				DrawSprite(enemyPos[i]->x - (tileWidth * xOffsetCam) - tileOffsetX, enemyPos[i]->y * tileHeight, enemySprites[0].get());
+				FillRect(enemyPos[i]->x - (tileWidth * xOffsetCam) - tileOffsetX, enemyPos[i]->y, tileWidth * 2, tileHeight, olc::CYAN);
+				//DrawSprite(enemyPos[i]->x - (tileWidth * xOffsetCam) - tileOffsetX, enemyPos[i]->y * tileHeight, enemySprites[0].get());
+				DrawSprite(enemyPos[i]->x - (tileWidth * xOffsetCam) - tileOffsetX, enemyPos[i]->y, enemySprites[0].get());
 			}
 		}
 		DrawSprite(playerPos.x - (tileWidth * xOffsetCam) - tileOffsetX, (playerPos.y), playerPos.sprites[playerPos.spriteNo].get());
