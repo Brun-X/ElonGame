@@ -51,7 +51,8 @@ private:
 	std::vector<boost::shared_ptr<olc::Sprite>> levelSprites;
 	std::vector<boost::shared_ptr<SpritePosition>> enemyPos;
 	int noEnemys = 0;
-	bool gameOver = false;
+	bool gameOver = false, reset_sequence = false;
+	float deadCounter = 0.0f;
 
 public:
 	Pico()
@@ -123,6 +124,35 @@ public:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
+
+		auto reset_game = [=](int colorState)
+		{
+			for(int x = 0; x <= FoVwidth; x++)
+			{
+				short unsigned int red = 0, green = 0, blue = 0;
+
+				int scalar = colorState / 4;
+
+				red = ((scalar + 1) % 2) * ((colorState * x) / 2) + 63;
+				green = (((scalar + 2) / 2) % 2) * ((colorState * x) / 2) + 63;
+				blue = ((scalar + 1) / 4) * ((colorState * x) / 2) + 63;
+
+/*
+				red = ((((2 + colorState) * x) / 4) + 16) % 128;
+				green = ((((4 + colorState) * x) / 8) + 32) % 128;
+				blue = ((((8 + colorState) * x) / 16) + 48) % 128;
+*/
+				olc::Pixel p(red, green, blue);
+				for(int y = 0; y < levelHeight; y++)
+				{
+					FillRect(x * tileWidth, y * tileHeight, tileWidth, tileHeight, p);
+				}
+			}
+
+			DrawString((ScreenWidth() / 2) - 48, 88, "Game Over!", olc::BLUE, 2);
+			return true;
+		};
+
 		//User input
 		static float potNewX = playerPos.x, potNewY = playerPos.y;
 		if(!gameOver)
@@ -309,68 +339,70 @@ public:
 
 
 		//Draw Screen
-		for(int x = -1; x <= FoVwidth; x++)
+		if(!gameOver)
 		{
-			for(int y = 0; y < levelHeight; y++)
+			for(int x = -1; x <= FoVwidth; x++)
 			{
-				switch(levelTiles[y * levelWidth + x + xOffsetCam])
+				for(int y = 0; y < levelHeight; y++)
 				{
-					case '#' :
-						DrawSprite(x * tileWidth - tileOffsetX, y * tileHeight, levelSprites[0].get());
-						break;
+					switch(levelTiles[y * levelWidth + x + xOffsetCam])
+					{
+						case '#' :
+							DrawSprite(x * tileWidth - tileOffsetX, y * tileHeight, levelSprites[0].get());
+							break;
 
-					case 'a' :
-						FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
-						DrawSprite(x * tileWidth - tileOffsetX, y * tileHeight, levelSprites[1].get());
+						case 'a' :
+							FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
+							DrawSprite(x * tileWidth - tileOffsetX, y * tileHeight, levelSprites[1].get());
 
-						break;
+							break;
 
-					case '.' :
-						FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
-						break;
+						case '.' :
+							FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
+							break;
 
-/*
-					case 'e' :
-						FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
-						DrawSprite(x * tileWidth - tileOffsetX - 1, y * tileHeight, enemySprites[0].get());
-						break;
-*/
-					default :
-						break;
+	/*
+						case 'e' :
+							FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
+							DrawSprite(x * tileWidth - tileOffsetX - 1, y * tileHeight, enemySprites[0].get());
+							break;
+	*/
+						default :
+							break;
+					}
 				}
 			}
 		}
-
-		if(gameOver)
-		{
-			DrawString((ScreenWidth() / 2) - 48, 88, "Game Over!", olc::BLUE, 2);
-			//DrawString(int32_t x, int32_t y, std::string sText, olc::Pixel col = olc::WHITE, uint32_t scale = 1)
-		}
-
-
-		/*
-		for(int x = 0; x < levelWidth; x++)
-		{
-			for(int y = 0; y < levelHeight; y++)
-			{
-				olc::Pixel p = levelTiles[y * levelWidth + x] == '#' ? olc::DARK_RED : olc::CYAN;
-				FillRect(x * tileWidth, y * tileHeight, tileWidth, tileHeight, p);
-			}
-		}
-		*/
-
-
 
 		for(int i = 0; i < noEnemys; i++)
 		{
 			if((enemyPos[i]->x > (xOffsetCam * tileWidth)) && (enemyPos[i]->x < ((xOffsetCam + FoVwidth) * tileWidth)))
 			{
 				FillRect(enemyPos[i]->x - (tileWidth * xOffsetCam) - tileOffsetX, enemyPos[i]->y, tileWidth * 2, tileHeight, olc::CYAN);
-				//DrawSprite(enemyPos[i]->x - (tileWidth * xOffsetCam) - tileOffsetX, enemyPos[i]->y * tileHeight, enemySprites[0].get());
 				DrawSprite(enemyPos[i]->x - (tileWidth * xOffsetCam) - tileOffsetX, enemyPos[i]->y, enemySprites[0].get());
 			}
 		}
 		DrawSprite(playerPos.x - (tileWidth * xOffsetCam) - tileOffsetX, (playerPos.y), playerPos.sprites[playerPos.spriteNo].get());
+
+		if(gameOver)
+		{
+			reset_sequence = true;
+			int colorState = (int)(deadCounter / 0.25f);
+			reset_game(colorState);
+			deadCounter += fElapsedTime;
+			if(deadCounter > 4.0f) reset_sequence = false;
+
+			if(!reset_sequence)
+			{
+				playerPos.x = tileWidth + 2;
+				playerPos.y = 100.0f;
+				deadCounter = 0.0f;
+				gameOver = false;
+			}
+			
+		}
+
+		
 
 		return true;
 	}
