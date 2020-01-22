@@ -15,6 +15,7 @@ IMPLEMNTED WITH THE OLCPIXELGAMEENGINE FROM:
 
 #include "olcPixelGameEngine.h"
 #include <boost/shared_ptr.hpp>
+#include <boost/format.hpp>
 #include <string>
 
 
@@ -53,6 +54,7 @@ private:
 	int noEnemys = 0;
 	bool gameOver = false, reset_sequence = false;
 	float deadCounter = 0.0f;
+	unsigned int collectables = 0;
 
 public:
 	Pico()
@@ -76,12 +78,13 @@ public:
 		levelTiles += "#..............#####.......##.........###.##.#.................#";
 		levelTiles += "#........#####.####............................................#";
 		levelTiles += "#......###...#...........##..................................#.#";
-		levelTiles += "#............######............................................#";
-		levelTiles += "#..............................................................#";
-		levelTiles += "##########aa############a#aaaa#####aaaaa########aaaaaaaaaaaa####";
+		levelTiles += "#....k.......######........#...................................#";
+		levelTiles += "#.....................e.....................e..................#";
+		levelTiles += "##########aa############a#aaaa#####aaaaa########aaaaaa#aaaaa####";
 
 		levelSprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("brick_tile.png")));
 		levelSprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("acid_tile.png")));
+		levelSprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("rubiks_key.png")));
 
 		enemySprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("enemy1.png")));
 		playerPos.sprites.push_back(boost::shared_ptr<olc::Sprite>(new olc::Sprite("pikman_right_1.png")));
@@ -238,6 +241,18 @@ public:
 				playerPos.velY = 0.0f;
 				gameOver = true;
 			}
+
+			if(levelTiles[yTile * levelWidth + xTile] == 'k')
+			{
+				levelTiles[yTile * levelWidth + xTile] = '.';
+				collectables++;
+			}
+
+			if(levelTiles[yTileOffset * levelWidth + xTile] == 'k')
+			{
+				levelTiles[yTileOffset * levelWidth + xTile] = '.';
+				collectables++;
+			}
 		}
 		// Right
 		else
@@ -257,6 +272,18 @@ public:
 				playerPos.velX = 0.0f;
 				playerPos.velY = 0.0f;
 				gameOver = true;
+			}
+
+			if(levelTiles[yTile * levelWidth + xTileOffset] == 'k')
+			{
+				levelTiles[yTile * levelWidth + xTileOffset] = '.';
+				collectables++;
+			}
+
+			if(levelTiles[yTileOffset * levelWidth + xTileOffset] == 'k')
+			{
+				levelTiles[yTileOffset * levelWidth + xTileOffset] = '.';
+				collectables++;
 			}
 		}
 
@@ -281,6 +308,18 @@ public:
 				playerPos.velY = 0.0f;
 				gameOver = true;
 			}
+
+			if(levelTiles[yTile * levelWidth + xTile] == 'k')
+			{
+				levelTiles[yTile * levelWidth + xTile] = '.';
+				collectables++;
+			}
+
+			if(levelTiles[yTile * levelWidth + xTileOffset] == 'k')
+			{
+				levelTiles[yTile * levelWidth + xTileOffset] = '.';
+				collectables++;
+			}
 		}
 		// Down
 		else
@@ -302,6 +341,19 @@ public:
 				playerPos.velX = 0.0f;
 				gameOver = true;
 			}
+
+			if(levelTiles[yTileOffset * levelWidth + xTile] == 'k')
+			{
+				levelTiles[yTileOffset * levelWidth + xTile] = '.';
+				collectables++;
+			}
+
+			if(levelTiles[yTileOffset * levelWidth + xTileOffset] == 'k')
+			{
+				levelTiles[yTileOffset * levelWidth + xTileOffset] = '.';
+				collectables++;
+			}
+
 			for(int i = 0; i < noEnemys; i++)
 			{
 				if((potNewX + tileWidth) > enemyPos[i]->x && potNewX < (enemyPos[i]->x + tileWidth))
@@ -383,12 +435,12 @@ public:
 							FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
 							break;
 
-	/*
-						case 'e' :
+	
+						case 'k' :
 							FillRect(x * tileWidth - tileOffsetX, y * tileHeight, tileWidth, tileHeight, olc::CYAN);
-							DrawSprite(x * tileWidth - tileOffsetX - 1, y * tileHeight, enemySprites[0].get());
+							DrawSprite(x * tileWidth - tileOffsetX - 1, y * tileHeight, levelSprites[2].get());
 							break;
-	*/
+	
 						default :
 							break;
 					}
@@ -406,13 +458,18 @@ public:
 		}
 		DrawSprite(playerPos.x - (tileWidth * xOffsetCam) - tileOffsetX, (playerPos.y), playerPos.sprites[playerPos.spriteNo].get());
 
+
+		//std::string loot = "Loot: "
+
+		//DrawString(0, 0, (std::string)(boost::format("Loot: %u") % collectables));
+
 		if(gameOver)
 		{
 			reset_sequence = true;
-			int colorState = (int)(deadCounter / 0.25f);
+			int colorState = (int)(deadCounter / 0.125f);
 			reset_game(colorState);
 			deadCounter += fElapsedTime;
-			if(deadCounter > 4.0f) reset_sequence = false;
+			if(deadCounter > 2.0f) reset_sequence = false;
 
 			if(!reset_sequence)
 			{
